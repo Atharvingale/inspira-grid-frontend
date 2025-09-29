@@ -1,7 +1,7 @@
-﻿/** @type {import('next').NextConfig} */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Fix the workspace root warning
-  outputFileTracingRoot: require('path').join(__dirname, '../'),
+  // Configure output for standalone deployment
+  output: 'standalone',
   
   // Ensure proper handling of TypeScript
   typescript: {
