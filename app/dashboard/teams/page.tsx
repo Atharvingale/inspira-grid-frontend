@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
   Search, 
@@ -13,7 +13,20 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  XCircle
+  XCircle,
+  Heart,
+  Filter,
+  ArrowUpDown,
+  Settings,
+  UserPlus,
+  UserMinus,
+  X,
+  TrendingUp,
+  Archive,
+  Eye,
+  Activity,
+  Award,
+  Target
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -21,6 +34,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { formatFirebaseTimestamp } from '@/lib/utils/dateUtils';
+import { toast } from 'react-toastify';
 
 interface Project {
   id: string;
@@ -44,6 +58,18 @@ export default function TeamsPage() {
   const [activeTab, setActiveTab] = useState<'my-projects' | 'teams'>('my-projects');
   const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [teamProjects, setTeamProjects] = useState<Project[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [selectedProjectForManage, setSelectedProjectForManage] = useState<Project | null>(null);
+  const [projectStats, setProjectStats] = useState<{
+    totalProjects: number;
+    activeProjects: number;
+    totalMembers: number;
+    completedProjects: number;
+  }>({ totalProjects: 0, activeProjects: 0, totalMembers: 0, completedProjects: 0 });
 
   useEffect(() => {
     const loadProjectsData = async () => {
@@ -98,6 +124,17 @@ export default function TeamsPage() {
           setTeamProjects(mappedProjects);
         }
         
+        // Calculate stats
+        const allProjects = [...(myProjectsRes.status === 'fulfilled' ? (myProjectsRes.value as any)?.projects || [] : []),
+                             ...(teamProjectsRes.status === 'fulfilled' ? (teamProjectsRes.value as any)?.projects || [] : [])];
+        const stats = {
+          totalProjects: allProjects.length,
+          activeProjects: allProjects.filter((p: any) => p.status === 'active' || p.status === 'approved').length,
+          totalMembers: allProjects.reduce((acc: number, p: any) => acc + (p.teamMembers?.length || 0) + 1, 0),
+          completedProjects: allProjects.filter((p: any) => p.status === 'completed').length
+        };
+        setProjectStats(stats);
+        
       } catch (error) {
         console.error('Error loading projects data:', error);
         setMyProjects([]);
@@ -109,6 +146,84 @@ export default function TeamsPage() {
 
     loadProjectsData();
   }, [currentUser]);
+
+  // Load favorites
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (!currentUser) return;
+      try {
+        const storedFavorites = localStorage.getItem(`team_favorites_${currentUser.uid}`);
+        if (storedFavorites) {
+          setFavorites(JSON.parse(storedFavorites));
+        }
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+      }
+    };
+    loadFavorites();
+  }, [currentUser]);
+
+  const toggleFavorite = (projectId: string) => {
+    const newFavorites = favorites.includes(projectId)
+      ? favorites.filter(id => id !== projectId)
+      : [...favorites, projectId];
+    
+    setFavorites(newFavorites);
+    if (currentUser) {
+      localStorage.setItem(`team_favorites_${currentUser.uid}`, JSON.stringify(newFavorites));
+    }
+    toast.success(
+      favorites.includes(projectId) ? 'Removed from favorites' : 'Added to favorites'
+    );
+  };
+
+  const handleManageTeam = (project: Project) => {
+    setSelectedProjectForManage(project);
+    setShowManageModal(true);
+  };
+
+  const sortProjects = (projects: Project[]) => {
+    const sorted = [...projects];
+    switch (sortBy) {
+      case 'recent':
+        return sorted.sort((a, b) => {
+          const dateA = typeof a.lastActivity === 'string' ? new Date(a.lastActivity).getTime() : 0;
+          const dateB = typeof b.lastActivity === 'string' ? new Date(b.lastActivity).getTime() : 0;
+          return dateB - dateA;
+        });
+      case 'alphabetical':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case 'status':
+        return sorted.sort((a, b) => a.status.localeCompare(b.status));
+      case 'team-size':
+        return sorted.sort((a, b) => b.currentTeamSize - a.currentTeamSize);
+      default:
+        return sorted;
+    }
+  };
+
+  const filterProjects = (projects: Project[]) => {
+    let filtered = projects;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply status filter
+    if (filterStatus) {
+      filtered = filtered.filter(p => p.status === filterStatus);
+    }
+    
+    return sortProjects(filtered);
+  };
+
+  const displayMyProjects = filterProjects(myProjects);
+  const displayTeamProjects = filterProjects(teamProjects);
 
   if (loading) {
     return (
@@ -238,37 +353,175 @@ export default function TeamsPage() {
               </Button>
             </motion.div>
           </div>
+
+          {/* Stats Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          >
+            <Card className="p-4 bg-gradient-to-br from-brand-primary/10 to-brand-primary/5 border-brand-primary/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-tertiary text-sm mb-1">Total Projects</p>
+                  <p className="text-3xl font-bold text-brand-primary">{projectStats.totalProjects}</p>
+                </div>
+                <div className="p-3 bg-brand-primary/20 rounded-lg">
+                  <Briefcase className="w-6 h-6 text-brand-primary" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-accent-green/10 to-accent-green/5 border-accent-green/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-tertiary text-sm mb-1">Active Projects</p>
+                  <p className="text-3xl font-bold text-accent-green">{projectStats.activeProjects}</p>
+                </div>
+                <div className="p-3 bg-accent-green/20 rounded-lg">
+                  <Activity className="w-6 h-6 text-accent-green" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-accent-purple/10 to-accent-purple/5 border-accent-purple/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-tertiary text-sm mb-1">Team Members</p>
+                  <p className="text-3xl font-bold text-accent-purple">{projectStats.totalMembers}</p>
+                </div>
+                <div className="p-3 bg-accent-purple/20 rounded-lg">
+                  <Users className="w-6 h-6 text-accent-purple" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-accent-blue/10 to-accent-blue/5 border-accent-blue/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-tertiary text-sm mb-1">Completed</p>
+                  <p className="text-3xl font-bold text-accent-blue">{projectStats.completedProjects}</p>
+                </div>
+                <div className="p-3 bg-accent-blue/20 rounded-lg">
+                  <Award className="w-6 h-6 text-accent-blue" />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </motion.div>
+
+        {/* Search and Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mb-6"
+        >
+          <Card className="p-4 backdrop-blur-sm bg-dark-card/80 border border-dark-border">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-tertiary" />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-dark-surface/50 border border-dark-border rounded-lg text-white placeholder-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                />
+              </div>
+
+              <div>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-surface/50 border border-dark-border rounded-lg text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="recruiting">Recruiting</option>
+                  <option value="completed">Completed</option>
+                  <option value="paused">Paused</option>
+                </select>
+              </div>
+
+              <div>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-surface/50 border border-dark-border rounded-lg text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                >
+                  <option value="recent">Most Recent</option>
+                  <option value="alphabetical">A-Z</option>
+                  <option value="status">By Status</option>
+                  <option value="team-size">Team Size</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Active filters display */}
+            {(searchTerm || filterStatus) && (
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-dark-border">
+                <span className="text-sm text-text-tertiary">Active filters:</span>
+                {searchTerm && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-brand-primary/20 text-brand-primary">
+                    Search: {searchTerm}
+                    <button onClick={() => setSearchTerm('')} className="ml-2 hover:text-brand-light">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filterStatus && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-accent-purple/20 text-accent-purple">
+                    Status: {filterStatus}
+                    <button onClick={() => setFilterStatus('')} className="ml-2 hover:text-accent-purple">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterStatus('');
+                  }}
+                  className="text-xs text-text-tertiary hover:text-text-primary"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+          </Card>
         </motion.div>
 
         {/* Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.7 }}
           className="mb-8"
         >
-          <div className="flex space-x-1 bg-dark-surface/50/50 rounded-lg p-1 backdrop-blur-sm border border-gray-700/50">
+          <div className="flex space-x-1 bg-dark-surface/50 rounded-lg p-1 backdrop-blur-sm border border-gray-700/50">
             <button
               onClick={() => setActiveTab('my-projects')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+              className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 ${
                 activeTab === 'my-projects'
                   ? 'bg-brand-primary text-white shadow-lg'
-                  : 'text-text-tertiary hover:text-white hover:bg-dark-surface/50/50'
+                  : 'text-text-tertiary hover:text-white hover:bg-dark-surface/50'
               }`}
             >
               <Briefcase className="w-4 h-4 mr-2 inline" />
-              My Projects ({myProjects.length})
+              My Projects ({displayMyProjects.length})
             </button>
             <button
               onClick={() => setActiveTab('teams')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+              className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 ${
                 activeTab === 'teams'
                   ? 'bg-brand-primary text-white shadow-lg'
-                  : 'text-text-tertiary hover:text-white hover:bg-dark-surface/50/50'
+                  : 'text-text-tertiary hover:text-white hover:bg-dark-surface/50'
               }`}
             >
               <Users className="w-4 h-4 mr-2 inline" />
-              Team Projects ({teamProjects.length})
+              Team Projects ({displayTeamProjects.length})
             </button>
           </div>
         </motion.div>
@@ -282,8 +535,8 @@ export default function TeamsPage() {
         >
           {activeTab === 'my-projects' ? (
             <div className="space-y-6">
-              {myProjects.length > 0 ? (
-                myProjects.map((project, index) => (
+              {displayMyProjects.length > 0 ? (
+                displayMyProjects.map((project, index) => (
                   <motion.div
                     key={project.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -342,12 +595,33 @@ export default function TeamsPage() {
                       </div>
                       
                       <div className="flex items-center justify-between pt-4 border-t border-gray-700/50">
-                        <div className="text-sm text-text-tertiary">
-                          Created by {project.owner}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(project.id);
+                            }}
+                            className="text-text-tertiary hover:text-red-500 transition-colors"
+                          >
+                            <Heart 
+                              className={`w-5 h-5 ${
+                                favorites.includes(project.id) 
+                                  ? 'fill-red-500 text-red-500' 
+                                  : ''
+                              }`} 
+                            />
+                          </button>
+                          <div className="text-sm text-text-tertiary">
+                            Created by {project.owner}
+                          </div>
                         </div>
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Users className="w-4 h-4 mr-1" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleManageTeam(project)}
+                          >
+                            <Settings className="w-4 h-4 mr-1" />
                             Manage Team
                           </Button>
                           <Button
@@ -392,8 +666,8 @@ export default function TeamsPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {teamProjects.length > 0 ? (
-                teamProjects.map((project, index) => (
+              {displayTeamProjects.length > 0 ? (
+                displayTeamProjects.map((project, index) => (
                   <motion.div
                     key={project.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -457,13 +731,35 @@ export default function TeamsPage() {
                       </div>
                       
                       <div className="flex items-center justify-between pt-4 border-t border-gray-700/50">
-                        <div className="text-sm text-text-tertiary">
-                          Created by {project.owner}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(project.id);
+                            }}
+                            className="text-text-tertiary hover:text-red-500 transition-colors"
+                            title={favorites.includes(project.id) ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            <Heart 
+                              className={`w-5 h-5 ${
+                                favorites.includes(project.id) 
+                                  ? 'fill-red-500 text-red-500' 
+                                  : ''
+                              }`} 
+                            />
+                          </button>
+                          <div className="text-sm text-text-tertiary">
+                            Created by {project.owner}
+                          </div>
                         </div>
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Star className="w-4 h-4 mr-1" />
-                            Add to Favorites
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => router.push(`/dashboard/projects/${project.id}`)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Details
                           </Button>
                           <Button
                             variant="outline"
@@ -471,7 +767,7 @@ export default function TeamsPage() {
                             onClick={() => router.push(`/dashboard/projects/${project.id}`)}
                             className="border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10"
                           >
-                            View Project
+                            Open Project
                             <ArrowRight className="w-4 h-4 ml-1" />
                           </Button>
                         </div>
@@ -508,6 +804,140 @@ export default function TeamsPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Manage Team Modal */}
+      <AnimatePresence>
+        {showManageModal && selectedProjectForManage && (
+          <motion.div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowManageModal(false)}
+          >
+            <motion.div 
+              className="relative border border-dark-border w-full max-w-3xl shadow-2xl rounded-2xl bg-dark-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-text-primary flex items-center">
+                      <Settings className="w-6 h-6 mr-2 text-brand-primary" />
+                      Manage Team
+                    </h3>
+                    <p className="text-text-secondary mt-1">{selectedProjectForManage.title}</p>
+                  </div>
+                  <button
+                    onClick={() => setShowManageModal(false)}
+                    className="text-text-tertiary hover:text-text-primary transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Project Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-dark-surface/30 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-brand-primary">{selectedProjectForManage.currentTeamSize}</p>
+                    <p className="text-sm text-text-tertiary mt-1">Current Members</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-accent-purple">{selectedProjectForManage.teamSize}</p>
+                    <p className="text-sm text-text-tertiary mt-1">Max Team Size</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-accent-green">
+                      {selectedProjectForManage.teamSize - selectedProjectForManage.currentTeamSize}
+                    </p>
+                    <p className="text-sm text-text-tertiary mt-1">Open Spots</p>
+                  </div>
+                </div>
+
+                {/* Team Members Section */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-text-primary">Team Members</h4>
+                    <Button variant="primary" size="sm">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Invite Member
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {/* Project Owner */}
+                    <div className="flex items-center justify-between p-3 bg-dark-surface/30 rounded-lg border border-brand-primary/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center">
+                          <span className="text-white font-bold">{selectedProjectForManage.owner[0]}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-text-primary">{selectedProjectForManage.owner}</p>
+                          <p className="text-sm text-text-tertiary">Project Owner</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-brand-primary/20 text-brand-primary rounded-full text-xs font-medium">
+                          Owner
+                        </span>
+                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                      </div>
+                    </div>
+
+                    {/* Team Members Placeholder */}
+                    {selectedProjectForManage.currentTeamSize > 1 ? (
+                      <div className="text-center py-8 text-text-tertiary">
+                        <Users className="w-12 h-12 mx-auto mb-3 text-text-tertiary" />
+                        <p>Team members will be displayed here</p>
+                        <p className="text-sm mt-1">Connect to backend to fetch team data</p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-text-tertiary">
+                        <Users className="w-12 h-12 mx-auto mb-3 text-text-tertiary" />
+                        <p>No team members yet</p>
+                        <p className="text-sm mt-1">Invite collaborators to join your project</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="border-t border-dark-border pt-4">
+                  <p className="text-sm text-text-tertiary mb-3">Quick Actions</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="justify-start"
+                      onClick={() => {
+                        router.push(`/dashboard/projects/${selectedProjectForManage.id}`);
+                        setShowManageModal(false);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Project Details
+                    </Button>
+                    <Button variant="outline" className="justify-start">
+                      <Activity className="w-4 h-4 mr-2" />
+                      View Applications
+                    </Button>
+                    <Button variant="outline" className="justify-start">
+                      <Target className="w-4 h-4 mr-2" />
+                      Project Settings
+                    </Button>
+                    <Button variant="outline" className="justify-start text-red-500 border-red-500/30 hover:bg-red-500/10">
+                      <Archive className="w-4 h-4 mr-2" />
+                      Archive Project
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

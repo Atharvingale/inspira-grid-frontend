@@ -62,6 +62,12 @@ export default function DashboardPage() {
       try {
         setLoadingData(true);
         
+        // Wait a moment to ensure Firebase auth token is ready
+        // This prevents 401 errors from token not being available immediately after login
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('Loading dashboard data for user:', currentUser.email);
+        
         // Load user's projects and applications in parallel
         const [myProjectsRes, teamProjectsRes, applicationsRes, recentProjectsRes] = await Promise.allSettled([
           apiClient.get('/api/projects/user/my-projects'),
@@ -69,6 +75,12 @@ export default function DashboardPage() {
           apiClient.get('/api/applications/my-applications'),
           apiClient.get('/api/projects?limit=6&orderBy=createdAt&orderDirection=desc')
         ]);
+        
+        // Log any failed requests
+        if (myProjectsRes.status === 'rejected') console.error('Failed to load my projects:', myProjectsRes.reason);
+        if (teamProjectsRes.status === 'rejected') console.error('Failed to load team projects:', teamProjectsRes.reason);
+        if (applicationsRes.status === 'rejected') console.error('Failed to load applications:', applicationsRes.reason);
+        if (recentProjectsRes.status === 'rejected') console.error('Failed to load recent projects:', recentProjectsRes.reason);
         
         // Extract data from successful responses
         const myProjects = myProjectsRes.status === 'fulfilled' ? (myProjectsRes.value as any)?.projects || [] : [];

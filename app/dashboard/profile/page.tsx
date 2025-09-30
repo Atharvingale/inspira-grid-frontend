@@ -58,12 +58,60 @@ const Profile = () => {
           const parsedProfile = JSON.parse(savedProfile);
           setProfile(parsedProfile);
           setSelectedSkills(parsedProfile.skills || []);
+        } else {
+          // Create initial profile from currentUser data
+          const initialProfile: UserProfile = {
+            id: currentUser.uid,
+            email: currentUser.email || '',
+            displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            profileComplete: false,
+            skills: [],
+            availability: 'available'
+          };
+          setProfile(initialProfile);
         }
       } catch (error) {
-        // Failed to load profile from localStorage
+        // Failed to load profile from localStorage - create initial profile
+        const initialProfile: UserProfile = {
+          id: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          profileComplete: false,
+          skills: [],
+          availability: 'available'
+        };
+        setProfile(initialProfile);
       }
     }
   }, [userProfile, currentUser]);
+
+  // Check for OAuth callback status
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      const error = urlParams.get('error');
+      
+      if (success === 'github_connected') {
+        toast.success('GitHub account connected successfully!');
+        setActiveTab('github'); // Switch to GitHub tab
+        // Clean up URL
+        window.history.replaceState({}, '', '/dashboard/profile');
+        // Reload GitHub profile
+        setTimeout(() => loadGitHubProfile(), 500);
+      } else if (error) {
+        const errorMessages: Record<string, string> = {
+          github_auth_failed: 'GitHub authentication failed. Please try again.',
+          github_auth_no_user: 'Failed to retrieve GitHub user data.',
+          auth_state_missing: 'Authentication state missing. Please try again.',
+          github_link_failed: 'Failed to link GitHub account. Please try again.'
+        };
+        toast.error(errorMessages[error] || 'An error occurred connecting GitHub.');
+        // Clean up URL
+        window.history.replaceState({}, '', '/dashboard/profile');
+      }
+    }
+  }, []);
 
   // Load GitHub profile
   useEffect(() => {
@@ -77,7 +125,16 @@ const Profile = () => {
     
     try {
       setGitHubLoading(true);
-      const response = await githubService.getProfile();
+      // Set timeout to prevent blocking UI for too long
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      const response = await Promise.race([
+        githubService.getProfile(),
+        timeoutPromise
+      ]) as any;
+      
       if (response.success) {
         setGitHubProfile(response.data!);
       } else {
@@ -85,6 +142,7 @@ const Profile = () => {
         setGitHubProfile(null);
       }
     } catch (error: any) {
+      console.log('GitHub profile not connected or unavailable');
       setGitHubProfile(null);
     } finally {
       setGitHubLoading(false);

@@ -19,11 +19,16 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
   // Add Firebase ID token to headers if user is authenticated
   if (user) {
     try {
-      const idToken = await user.getIdToken();
+      const idToken = await user.getIdToken(true); // Force refresh to ensure valid token
       headers['Authorization'] = `Bearer ${idToken}`;
+      console.log('Added auth token to request for:', path);
     } catch (error) {
-      console.warn('Failed to get Firebase ID token:', error);
+      console.error('Failed to get Firebase ID token:', error);
+      throw new Error('Authentication failed. Please try logging in again.');
     }
+  } else {
+    // If no user is logged in and this is an authenticated endpoint, throw an error
+    console.warn('No authenticated user found for API request:', path);
   }
 
   const requestInit: RequestInit = {
@@ -57,11 +62,14 @@ export async function authHeaders(): Promise<Record<string, string>> {
 
   if (user) {
     try {
-      const idToken = await user.getIdToken();
+      const idToken = await user.getIdToken(true); // Force refresh to ensure valid token
       headers['Authorization'] = `Bearer ${idToken}`;
     } catch (error) {
-      console.warn('Failed to get Firebase ID token:', error);
+      console.error('Failed to get Firebase ID token:', error);
+      throw new Error('Authentication failed. Please try logging in again.');
     }
+  } else {
+    console.warn('No authenticated user found when getting auth headers');
   }
 
   return headers;

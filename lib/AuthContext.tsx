@@ -253,7 +253,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Update user profile
   const updateUserProfile = async (uid: string, profileData: Partial<UserProfile>) => {
     try {
-      await updateDoc(doc(db, 'users', uid), profileData);
+      // Use setDoc with merge to create document if it doesn't exist
+      await setDoc(doc(db, 'users', uid), profileData, { merge: true });
       
       // Update local state
       const updatedProfile = {
@@ -267,7 +268,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const isComplete = checkProfileComplete(updatedProfile);
       
       if (isComplete && !profileComplete) {
-        await updateDoc(doc(db, 'users', uid), { profileComplete: true });
+        await setDoc(doc(db, 'users', uid), { profileComplete: true }, { merge: true });
         setProfileComplete(true);
       }
       
