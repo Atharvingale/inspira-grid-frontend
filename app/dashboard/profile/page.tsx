@@ -5,6 +5,28 @@ import { toast } from 'react-toastify';
 import { useAuth } from '@/lib/AuthContext';
 import { githubService, type GitHubProfile } from '@/lib/services/githubService';
 import Loading from '@/components/common/Loading';
+import { motion } from 'framer-motion';
+import { 
+  Camera, 
+  Upload, 
+  X, 
+  Globe, 
+  Github as GithubIcon, 
+  Linkedin, 
+  Twitter,
+  MapPin,
+  Briefcase,
+  Star,
+  Award,
+  Zap,
+  Check,
+  Plus,
+  Trash2,
+  Save,
+  User,
+  Mail,
+  Link as LinkIcon
+} from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -29,6 +51,9 @@ const Profile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [twitter, setTwitter] = useState('');
   
   // GitHub state
   const [githubProfile, setGitHubProfile] = useState<GitHubProfile | null>(null);
@@ -213,6 +238,38 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+        toast.success('Avatar uploaded! Save to apply changes.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Image size should be less than 10MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBannerPreview(reader.result as string);
+        toast.success('Banner uploaded! Save to apply changes.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile || !currentUser) return;
 
@@ -242,12 +299,149 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-lighter p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-text-primary">Profile Management</h1>
-          <p className="text-text-secondary mt-1">Manage your profile information and settings</p>
+    <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-lighter">
+      <div className="max-w-6xl mx-auto">
+        {/* Banner Section with Upload */}
+        <motion.div 
+          className="relative h-64 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-b-3xl overflow-hidden"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {bannerPreview && (
+            <img 
+              src={bannerPreview} 
+              alt="Banner" 
+              className="w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-dark-darker/50" />
+          
+          {/* Banner Upload Button */}
+          <label className="absolute top-4 right-4 cursor-pointer">
+            <motion.div 
+              className="flex items-center space-x-2 px-4 py-2 backdrop-blur-xl bg-white/20 border border-white/30 rounded-full text-white hover:bg-white/30 transition-all shadow-lg"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Camera className="w-4 h-4" />
+              <span className="text-sm font-medium">Change Banner</span>
+            </motion.div>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleBannerUpload}
+              className="hidden" 
+            />
+          </label>
+
+          {/* Avatar Section */}
+          <div className="absolute -bottom-20 left-8">
+            <div className="relative">
+              {/* Avatar Image */}
+              <motion.div 
+                className="w-40 h-40 rounded-3xl border-4 border-dark-darker bg-gradient-to-br from-brand-primary to-brand-secondary overflow-hidden shadow-2xl"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                {avatarPreview || currentUser?.photoURL ? (
+                  <img 
+                    src={avatarPreview || currentUser?.photoURL || ''} 
+                    alt="Avatar" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-20 h-20 text-white" />
+                  </div>
+                )}
+              </motion.div>
+              
+              {/* Avatar Upload Button */}
+              <label className="absolute bottom-2 right-2 cursor-pointer">
+                <motion.div 
+                  className="p-3 backdrop-blur-xl bg-white/90 rounded-full shadow-lg hover:bg-white transition-all"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Camera className="w-5 h-5 text-brand-primary" />
+                </motion.div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleAvatarUpload}
+                  className="hidden" 
+                />
+              </label>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Profile Info Bar */}
+        <div className="px-8 pt-24 pb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="mb-4 lg:mb-0">
+              <motion.h1 
+                className="text-4xl font-bold text-white mb-2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                {profile.displayName || 'Your Name'}
+              </motion.h1>
+              <motion.div 
+                className="flex items-center space-x-4 text-text-tertiary"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="flex items-center space-x-2">
+                  <Mail className="w-4 h-4" />
+                  <span className="text-sm">{profile.email}</span>
+                </div>
+                {profile.location && (
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-sm">{profile.location}</span>
+                  </div>
+                )}
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
+                  profile.availability === 'available' ? 'bg-emerald-500/20 text-emerald-400' :
+                  profile.availability === 'busy' ? 'bg-amber-500/20 text-amber-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    profile.availability === 'available' ? 'bg-emerald-400' :
+                    profile.availability === 'busy' ? 'bg-amber-400' :
+                    'bg-red-400'
+                  } animate-pulse`} />
+                  <span className="text-xs font-medium capitalize">{profile.availability || 'available'}</span>
+                </div>
+              </motion.div>
+            </div>
+            
+            <motion.button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl hover:shadow-lg hover:shadow-brand-primary/30 disabled:opacity-50 transition-all"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Save className="w-5 h-5" />
+              <span className="font-semibold">{saving ? 'Saving...' : 'Save Changes'}</span>
+            </motion.button>
+          </div>
         </div>
+
+        {/* Content Section */}
+        <div className="px-8 pb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-white">Edit Profile</h2>
+            <p className="text-text-tertiary mt-1">Customize your profile and showcase your skills</p>
+          </div>
 
         {/* Tabs */}
         <div className="border-b border-dark-border/50 mb-6">

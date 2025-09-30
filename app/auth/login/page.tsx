@@ -102,58 +102,130 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-lighter overflow-hidden">
-      {/* Floating background elements */}
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden relative">
+      {/* Animated glassmorphism background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {/* Large floating orbs */}
         <motion.div 
-          className="absolute top-20 left-10 w-20 h-20 bg-brand-primary/20 rounded-full blur-xl"
-          animate={{ y: [-20, 20, -20], x: [-10, 10, -10] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-48 -left-48 w-96 h-96 bg-gradient-to-br from-pink-500/30 to-purple-500/30 rounded-full blur-3xl"
+          animate={{ 
+            scale: [1, 1.2, 1],
+            x: [-50, 50, -50],
+            y: [-50, 50, -50],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div 
-          className="absolute bottom-20 right-20 w-32 h-32 bg-accent-purple/20 rounded-full blur-xl"
-          animate={{ y: [20, -20, 20], x: [10, -10, 10] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/4 right-20 w-72 h-72 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-full blur-3xl"
+          animate={{ 
+            scale: [1.2, 1, 1.2],
+            x: [50, -50, 50],
+            y: [30, -30, 30],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
         />
+        <motion.div 
+          className="absolute bottom-20 left-1/3 w-80 h-80 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 rounded-full blur-3xl"
+          animate={{ 
+            scale: [1, 1.3, 1],
+            rotate: [0, 180, 360],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+        />
+        {/* Small floating particles */}
+        {[...Array(15)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-2 h-2 bg-white/20 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [-20, 20, -20],
+              opacity: [0.2, 0.5, 0.2],
+            }}
+            transition={{
+              duration: 3 + Math.random() * 4,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+          />
+        ))}
       </div>
       
       <div className="relative z-10 min-h-screen flex">
         {/* Left side - Branding */}
         <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
           <motion.div 
-            className="max-w-md text-center"
+            className="max-w-md"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <motion.div 
-              className="mb-8"
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 4, repeat: Infinity }}
+            {/* Glassmorphism container */}
+            <motion.div
+              className="backdrop-blur-2xl bg-white/5 border border-white/20 rounded-3xl p-10 shadow-2xl"
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300 }}
             >
-              <div className="w-20 h-20 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <Sparkles className="w-12 h-12 text-white" />
+              <motion.div 
+                className="mb-8 text-center"
+                animate={{ 
+                  y: [-10, 10, -10],
+                }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <div className="w-24 h-24 bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                  <Sparkles className="w-14 h-14 text-white" />
+                </div>
+              </motion.div>
+              
+              <h1 className="text-5xl font-bold text-white mb-6 text-center leading-tight">
+                Welcome Back to
+                <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 bg-clip-text text-transparent block mt-2">
+                  Inspira-Grid
+                </span>
+              </h1>
+              
+              <p className="text-white/80 text-lg text-center mb-8 leading-relaxed">
+                Continue your journey of building amazing projects with talented creators.
+              </p>
+              
+              <div className="space-y-4">
+                <motion.div 
+                  className="flex items-center text-white/90 backdrop-blur-xl bg-white/10 rounded-2xl p-4"
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <div className="w-3 h-3 bg-emerald-400 rounded-full mr-3 shadow-lg shadow-emerald-400/50">
+                    <motion.div 
+                      className="w-full h-full bg-emerald-400 rounded-full"
+                      animate={{ scale: [1, 1.5, 1], opacity: [1, 0, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                  </div>
+                  <span className="font-medium">247 creators online now</span>
+                </motion.div>
+                
+                <motion.div 
+                  className="flex items-center text-white/90 backdrop-blur-xl bg-white/10 rounded-2xl p-4"
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.7 }}
+                >
+                  <div className="w-3 h-3 bg-blue-400 rounded-full mr-3 shadow-lg shadow-blue-400/50">
+                    <motion.div 
+                      className="w-full h-full bg-blue-400 rounded-full"
+                      animate={{ scale: [1, 1.5, 1], opacity: [1, 0, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                    />
+                  </div>
+                  <span className="font-medium">1,247 active projects</span>
+                </motion.div>
               </div>
             </motion.div>
-            <h1 className="text-4xl font-bold text-white mb-4">
-              Welcome Back to
-              <span className="bg-gradient-to-r from-brand-light to-accent-purple bg-clip-text text-transparent block">
-                Inspira-Grid
-              </span>
-            </h1>
-            <p className="text-text-tertiary text-lg">
-              Continue your journey of building amazing projects with talented creators.
-            </p>
-            <div className="mt-8 space-y-4">
-              <div className="flex items-center text-text-tertiary">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse" />
-                <span>247 creators online now</span>
-              </div>
-              <div className="flex items-center text-text-tertiary">
-                <div className="w-2 h-2 bg-brand-primary rounded-full mr-3 animate-pulse" />
-                <span>1,247 active projects</span>
-              </div>
-            </div>
           </motion.div>
         </div>
         
@@ -172,7 +244,7 @@ export default function LoginPage() {
             >
               <Link 
                 href="/" 
-                className="inline-flex items-center text-text-tertiary hover:text-white transition-colors"
+                className="inline-flex items-center text-white/80 hover:text-white transition-all backdrop-blur-xl bg-white/10 px-4 py-2 rounded-full border border-white/20 hover:border-white/40 shadow-lg"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Home
@@ -180,31 +252,58 @@ export default function LoginPage() {
             </motion.div>
             
             {/* Mobile header */}
-            <div className="lg:hidden text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-8 h-8 text-white" />
+            <motion.div 
+              className="lg:hidden text-center mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
+                <Sparkles className="w-10 h-10 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-              <p className="text-text-tertiary">Sign in to continue building</p>
-            </div>
+              <h1 className="text-4xl font-bold text-white mb-2">Welcome Back</h1>
+              <p className="text-white/70 text-lg">Sign in to continue building</p>
+            </motion.div>
 
-            {/* Form */}
-            <Card className="p-8">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Sign In</h2>
-                <p className="text-text-tertiary">Welcome back! Please sign in to continue</p>
+            {/* Glassmorphism Form */}
+            <motion.div 
+              className="relative backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ boxShadow: "0 25px 50px -12px rgba(255, 255, 255, 0.25)" }}
+            >
+              {/* Glass shine effect */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
+              
+              <div className="text-center mb-8 relative z-10">
+                <motion.h2 
+                  className="text-3xl font-bold text-white mb-2 bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent"
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  Sign In
+                </motion.h2>
+                <p className="text-white/70">Welcome back! Please sign in to continue</p>
               </div>
               {error && (
                 <motion.div 
-                  className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 backdrop-blur-xl bg-red-500/20 border border-red-400/30 rounded-2xl"
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
                 >
-                  <p className="text-red-400 text-sm">{error}</p>
+                  <p className="text-red-100 text-sm font-medium flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {error}
+                  </p>
                 </motion.div>
               )}
 
-              <form onSubmit={handleEmailLogin} className="space-y-6">
+              <form onSubmit={handleEmailLogin} className="space-y-6 relative z-10">
                 <div className="space-y-6">
                   <Input
                     type="email"
@@ -256,13 +355,13 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-8">
+              <div className="mt-8 relative z-10">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-dark-border"></div>
+                    <div className="w-full border-t border-white/30"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-dark-card text-text-tertiary">Or continue with</span>
+                    <span className="px-4 backdrop-blur-xl bg-white/10 text-white/90 rounded-full">Or continue with</span>
                   </div>
                 </div>
 
@@ -294,15 +393,15 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="mt-8 text-center">
-                <p className="text-text-tertiary">
+              <div className="mt-8 text-center relative z-10">
+                <p className="text-white/80">
                   Don&apos;t have an account?{" "}
-                  <Link href="/auth/register" className="text-brand-light hover:text-brand-primary transition-colors font-medium">
+                  <Link href="/auth/register" className="text-white font-bold hover:text-cyan-300 transition-colors underline decoration-2 underline-offset-4">
                     Sign up here
                   </Link>
                 </p>
               </div>
-            </Card>
+            </motion.div>
           </motion.div>
         </div>
       </div>

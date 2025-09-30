@@ -18,7 +18,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Folder
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -70,6 +71,8 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [applying, setApplying] = useState(false);
+  const [activeTab, setActiveTab] = useState<'discover' | 'my-projects'>('discover');
+  const [myProjects, setMyProjects] = useState<Project[]>([]);
   const projectsPerPage = 9;
 
   const categories = [
@@ -109,24 +112,51 @@ const Projects = () => {
       try {
         setLoading(true);
         
-        // Build query parameters
-        const params = new URLSearchParams();
-        if (searchTerm) params.append('search', searchTerm);
-        if (selectedCategory) params.append('category', selectedCategory);
-        if (selectedStatus) params.append('status', selectedStatus);
-        else params.append('status', 'approved'); // Default to approved
-        params.append('limit', '100');
+        if (activeTab === 'discover') {
+          // Load all approved projects for discovery
+          const params = new URLSearchParams();
+          if (searchTerm) params.append('search', searchTerm);
+          if (selectedCategory) params.append('category', selectedCategory);
+          if (selectedStatus) params.append('status', selectedStatus);
+          else params.append('status', 'approved'); // Default to approved
+          params.append('limit', '100');
+          
+          const queryString = params.toString();
+          const url = `/api/projects${queryString ? '?' + queryString : ''}`;
+          
+          const response = await apiClient.get(url);
+          let fetchedProjects = (response as any)?.projects || [];
+          
+          // Apply sorting
+          fetchedProjects = sortProjects(fetchedProjects, sortBy);
+          
+          setFilteredProjects(fetchedProjects);
+        } else {
+          // Load user's own projects
+          const response = await apiClient.get('/api/projects/user/my-projects');
+          let userProjects = (response as any)?.projects || [];
+          
+          // Apply filters
+          if (searchTerm) {
+            userProjects = userProjects.filter((p: Project) => 
+              p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              p.description.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+          }
+          if (selectedCategory) {
+            userProjects = userProjects.filter((p: Project) => p.category === selectedCategory);
+          }
+          if (selectedStatus) {
+            userProjects = userProjects.filter((p: Project) => p.status === selectedStatus);
+          }
+          
+          // Apply sorting
+          userProjects = sortProjects(userProjects, sortBy);
+          
+          setMyProjects(userProjects);
+          setFilteredProjects(userProjects);
+        }
         
-        const queryString = params.toString();
-        const url = `/api/projects${queryString ? '?' + queryString : ''}`;
-        
-        const response = await apiClient.get(url);
-        let fetchedProjects = (response as any)?.projects || [];
-        
-        // Apply sorting
-        fetchedProjects = sortProjects(fetchedProjects, sortBy);
-        
-        setFilteredProjects(fetchedProjects);
         setCurrentPage(1); // Reset to first page on new search
         
       } catch (error) {
@@ -138,7 +168,7 @@ const Projects = () => {
     };
 
     loadProjects();
-  }, [currentUser, searchTerm, selectedCategory, selectedStatus]);
+  }, [currentUser, searchTerm, selectedCategory, selectedStatus, activeTab, sortBy]);
 
   // Load favorites
   useEffect(() => {
@@ -259,6 +289,39 @@ const Projects = () => {
       transition={{ duration: 0.5 }}
     >
       <div className="max-w-7xl mx-auto">
+        {/* Tab Navigation */}
+        <motion.div
+          className="mb-8"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+          <div className="flex items-center gap-2 border-b border-dark-border">
+            <button
+              onClick={() => setActiveTab('discover')}
+              className={`px-6 py-3 font-semibold transition-all duration-300 relative ${
+                activeTab === 'discover'
+                  ? 'text-brand-primary border-b-2 border-brand-primary'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Search className="inline-block mr-2 h-4 w-4" />
+              Discover Projects
+            </button>
+            <button
+              onClick={() => setActiveTab('my-projects')}
+              className={`px-6 py-3 font-semibold transition-all duration-300 relative ${
+                activeTab === 'my-projects'
+                  ? 'text-brand-primary border-b-2 border-brand-primary'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Folder className="inline-block mr-2 h-4 w-4" />
+              My Projects
+            </button>
+          </div>
+        </motion.div>
+
         {/* Header Section */}
         <motion.div 
           className="mb-8"
@@ -269,10 +332,13 @@ const Projects = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-text-primary to-brand-light bg-clip-text text-transparent mb-2">
-                Discover Projects
+                {activeTab === 'discover' ? 'Discover Projects' : 'My Projects'}
               </h1>
               <p className="text-text-secondary text-lg">
-                Find exciting projects and join collaborative teams
+                {activeTab === 'discover'
+                  ? 'Find exciting projects and join collaborative teams'
+                  : 'Manage and track your personal projects'
+                }
               </p>
             </div>
             <Button 
