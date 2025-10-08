@@ -846,47 +846,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* Tips Section */}
-            <Card className="border-accent-orange/20 bg-accent-orange/5">
-              <div className="p-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="p-2 rounded-lg bg-accent-orange/10">
-                    <Lightbulb className="w-5 h-5 text-accent-orange" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Getting Started</h3>
-                </div>
-                <div className="space-y-4">
-                  {[
-                    { text: "Complete your profile to attract collaborators", completed: true },
-                    { text: "Browse projects that match your skills", completed: true },
-                    { text: "Create your first project", completed: false },
-                    { text: "Connect with team members", completed: false },
-                  ].map((tip, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 1.5 + index * 0.1 }}
-                      className="flex items-start space-x-3"
-                    >
-                      <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center ${
-                        tip.completed ? 'bg-accent-green text-white' : 'bg-dark-surface/50'
-                      }`}>
-                        {tip.completed ? (
-                          <CheckCircle2 className="w-3 h-3" />
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-dark-surface/50" />
-                        )}
-                      </div>
-                      <p className={`text-sm ${
-                        tip.completed ? 'text-text-tertiary line-through' : 'text-white'
-                      }`}>
-                        {tip.text}
-                      </p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </Card>
+
           </motion.div>
         </div>
 
