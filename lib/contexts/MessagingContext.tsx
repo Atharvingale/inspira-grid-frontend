@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { socket } from '@/lib/socket';
+import { getPusherClient } from '@/lib/pusher';
+import type PusherClient from 'pusher-js';
+import type { Channel } from 'pusher-js';
 
 export interface User {
   id: string;
@@ -36,6 +38,8 @@ export interface Message {
   edited?: boolean;
   editedAt?: Date;
   isDeleted?: boolean;
+  readBy?: string[]; // Array of user IDs who have read this message
+  deliveredTo?: string[]; // Array of user IDs to whom this message was delivered
 }
 
 export interface Conversation {
@@ -310,16 +314,25 @@ const MessagingContext = createContext<MessagingContextType | undefined>(undefin
 export function MessagingProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(messagingReducer, initialState);
   const { currentUser } = useAuth();
+  const [pusherClient, setPusherClient] = useState<PusherClient | null>(null);
+  const [userChannel, setUserChannel] = useState<Channel | null>(null);
+  const [conversationChannels, setConversationChannels] = useState<Map<string, Channel>>(new Map());
 
-  // Socket event handlers
+  // Pusher event handlers
   useEffect(() => {
-    if (!currentUser || !socket) return;
+    if (!currentUser) return;
 
-    // Join user to their personal room for notifications
-    socket.emit('user:join', currentUser.uid);
+    const client = getPusherClient();
+    if (!client) return;
+
+    setPusherClient(client);
+
+    // Subscribe to user's private channel
+    const channel = client.subscribe(`private-user-${currentUser.uid}`);
+    setUserChannel(channel);
 
     // Message events
-    socket.on('message:new', (message: Message) => {
+    channel.bind('message:new', (message: Message) => {
       dispatch({ type: 'ADD_MESSAGE', payload: message });
       // Play notification sound if message is not from current user
       if (message.senderId !== currentUser.uid) {
@@ -327,16 +340,16 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    socket.on('message:updated', (message: Message) => {
+    channel.bind('message:updated', (message: Message) => {
       dispatch({ type: 'UPDATE_MESSAGE', payload: message });
     });
 
-    socket.on('message:deleted', (message: Message) => {
-      dispatch({ type: 'UPDATE_MESSAGE', payload: message });
+    channel.bind('message:deleted', (data: { conversationId: string; messageId: string }) => {
+      dispatch({ type: 'DELETE_MESSAGE', payload: data });
     });
 
     // Reaction events
-    socket.on('reaction:added', ({ conversationId, messageId, reaction }: { 
+    channel.bind('reaction:added', ({ conversationId, messageId, reaction }: { 
       conversationId: string; 
       messageId: string; 
       reaction: MessageReaction;
@@ -347,7 +360,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    socket.on('reaction:removed', ({ conversationId, messageId, emoji, userId }: {
+    channel.bind('reaction:removed', ({ conversationId, messageId, emoji, userId }: {
       conversationId: string;
       messageId: string;
       emoji: string;
@@ -359,56 +372,67 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    // User presence events
-    socket.on('user:online', (user: User) => {
+    // User presence events (using Pusher presence channel)
+    channel.bind('user:online', (user: User) => {
       dispatch({ type: 'USER_ONLINE', payload: user });
     });
 
-    socket.on('user:offline', (userId: string) => {
+    channel.bind('user:offline', (userId: string) => {
       dispatch({ type: 'USER_OFFLINE', payload: userId });
     });
 
     // Typing events
-    socket.on('typing:start', (indicator: TypingIndicator) => {
+    channel.bind('typing:start', (indicator: TypingIndicator) => {
       // Don't show typing indicator for current user
       if (indicator.userId !== currentUser.uid) {
         dispatch({ type: 'SET_TYPING', payload: indicator });
       }
     });
 
-    socket.on('typing:stop', ({ conversationId, userId }: { conversationId: string; userId: string }) => {
+    channel.bind('typing:stop', ({ conversationId, userId }: { conversationId: string; userId: string }) => {
       dispatch({ type: 'CLEAR_TYPING', payload: { conversationId, userId } });
     });
 
     // Conversation events
-    socket.on('conversation:updated', (conversation: Conversation) => {
+    channel.bind('conversation:updated', (conversation: Conversation) => {
       dispatch({ type: 'UPDATE_CONVERSATION', payload: conversation });
     });
 
-    socket.on('conversation:new', (conversation: Conversation) => {
+    channel.bind('conversation:new', (conversation: Conversation) => {
       dispatch({ type: 'ADD_CONVERSATION', payload: conversation });
     });
 
-    // Error handling
-    socket.on('error', (error: string) => {
-      console.error('Socket error:', error);
-      dispatch({ type: 'SET_ERROR', payload: error });
+    // Messages read event
+    channel.bind('messages:read', ({ conversationId, userId, messageIds }: { 
+      conversationId: string; 
+      userId: string; 
+      messageIds: string[];
+    }) => {
+      // Update messages to mark them as read
+      const conversationMessages = state.messages[conversationId] || [];
+      const updatedMessages = conversationMessages.map(msg => {
+        if (messageIds.includes(msg.id)) {
+          const readBy = msg.readBy || [];
+          if (!readBy.includes(userId)) {
+            return { ...msg, readBy: [...readBy, userId] };
+          }
+        }
+        return msg;
+      });
+      
+      dispatch({ 
+        type: 'SET_MESSAGES', 
+        payload: { conversationId, messages: updatedMessages }
+      });
     });
 
     return () => {
-      if (socket) {
-        socket.off('message:new');
-        socket.off('message:updated');
-        socket.off('message:deleted');
-        socket.off('reaction:added');
-        socket.off('reaction:removed');
-        socket.off('user:online');
-        socket.off('user:offline');
-        socket.off('typing:start');
-        socket.off('typing:stop');
-        socket.off('conversation:updated');
-        socket.off('conversation:new');
-        socket.off('error');
+      if (channel) {
+        channel.unbind_all();
+        channel.unsubscribe();
+      }
+      if (client) {
+        client.disconnect();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -419,15 +443,16 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
     try {
       const audio = new Audio('/sounds/notification.mp3');
       audio.volume = 0.5;
-      audio.play().catch(e => console.log('Could not play notification sound:', e));
+      audio.play().catch(() => {});
     } catch (_error) {
-      console.log('Notification sound not available');
+      // Notification sound not available
     }
   }, []);
 
   const loadConversations = useCallback(async () => {
     if (!currentUser) return;
     
+    console.log('Loading conversations...');
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const token = await currentUser.getIdToken();
@@ -443,6 +468,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
+      console.log('Loaded conversations:', data.conversations?.length || 0, 'Total unread:', data.conversations?.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0));
       dispatch({ type: 'SET_CONVERSATIONS', payload: data.conversations || [] });
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -490,8 +516,10 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setActiveConversation = useCallback((conversation: Conversation | null) => {
+    console.log('Setting active conversation:', conversation?.id);
     dispatch({ type: 'SET_ACTIVE_CONVERSATION', payload: conversation });
     if (conversation && conversation.unreadCount > 0) {
+      console.log('Marking conversation as read:', conversation.id, 'unread count:', conversation.unreadCount);
       markConversationAsRead(conversation.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -513,6 +541,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!currentUser) return;
     
+    console.log('Loading messages for conversation:', conversationId);
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const token = await currentUser.getIdToken();
@@ -528,7 +557,21 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
+      console.log('Loaded messages:', data.messages?.length || 0);
       dispatch({ type: 'SET_MESSAGES', payload: { conversationId, messages: data.messages || [] } });
+      
+      // Mark all messages as read
+      try {
+        await fetch(`/api/conversations/${conversationId}/read`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Failed to load messages' });
@@ -563,12 +606,8 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      dispatch({ type: 'ADD_MESSAGE', payload: data.message });
-      
-      // Emit socket event for real-time updates
-      if (socket) {
-        socket.emit('message:send', data.message);
-      }
+      // No need to dispatch - Pusher will handle real-time update
+      // dispatch({ type: 'ADD_MESSAGE', payload: data.message });
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;
@@ -597,12 +636,8 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      dispatch({ type: 'UPDATE_MESSAGE', payload: data.message });
-      
-      // Emit socket event for real-time updates
-      if (socket) {
-        socket.emit('message:edit', data.message);
-      }
+      // Pusher will handle real-time update
+      // dispatch({ type: 'UPDATE_MESSAGE', payload: data.message });
     } catch (error) {
       console.error('Error editing message:', error);
       throw error;
@@ -627,12 +662,8 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      dispatch({ type: 'UPDATE_MESSAGE', payload: data.message });
-      
-      // Emit socket event for real-time updates
-      if (socket) {
-        socket.emit('message:delete', { conversationId, messageId });
-      }
+      // Pusher will handle real-time update
+      // dispatch({ type: 'DELETE_MESSAGE', payload: { conversationId, messageId } });
     } catch (error) {
       console.error('Error deleting message:', error);
       throw error;
@@ -661,12 +692,8 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      dispatch({ type: 'UPDATE_MESSAGE', payload: data.message });
-      
-      // Emit socket event for real-time updates
-      if (socket) {
-        socket.emit('reaction:add', { conversationId, messageId, emoji, userId: currentUser.uid });
-      }
+      // Pusher will handle real-time update
+      // dispatch({ type: 'ADD_REACTION', payload: { conversationId, messageId, reaction: data.reaction } });
     } catch (error) {
       console.error('Error adding reaction:', error);
     }
@@ -694,12 +721,8 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      dispatch({ type: 'UPDATE_MESSAGE', payload: data.message });
-      
-      // Emit socket event for real-time updates
-      if (socket) {
-        socket.emit('reaction:remove', { conversationId, messageId, emoji, userId: currentUser.uid });
-      }
+      // Pusher will handle real-time update
+      // dispatch({ type: 'REMOVE_REACTION', payload: { conversationId, messageId, emoji, userId: currentUser.uid } });
     } catch (error) {
       console.error('Error removing reaction:', error);
     }
@@ -745,14 +768,38 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, sendMessage]);
 
-  const startTyping = useCallback((conversationId: string) => {
-    if (!currentUser || !socket) return;
-    socket.emit('typing:start', { conversationId, userId: currentUser.uid, userName: currentUser.displayName });
+  const startTyping = useCallback(async (conversationId: string) => {
+    if (!currentUser) return;
+    try {
+      const token = await currentUser.getIdToken();
+      await fetch(`/api/conversations/${conversationId}/typing`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'start' })
+      });
+    } catch (error) {
+      console.error('Error starting typing indicator:', error);
+    }
   }, [currentUser]);
 
-  const stopTyping = useCallback((conversationId: string) => {
-    if (!currentUser || !socket) return;
-    socket.emit('typing:stop', { conversationId, userId: currentUser.uid });
+  const stopTyping = useCallback(async (conversationId: string) => {
+    if (!currentUser) return;
+    try {
+      const token = await currentUser.getIdToken();
+      await fetch(`/api/conversations/${conversationId}/typing`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'stop' })
+      });
+    } catch (error) {
+      console.error('Error stopping typing indicator:', error);
+    }
   }, [currentUser]);
 
   const searchMessages = useCallback(async (query: string, conversationId?: string) => {
@@ -810,10 +857,10 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
     if (conversation.name) return conversation.name;
     if (conversation.type === 'project_group') return `${conversation.projectTitle} Team`;
     if (conversation.type === 'direct') {
-      const otherParticipant = conversation.participants.find(p => p.id !== currentUser?.uid);
+      const otherParticipant = conversation.participants?.find(p => p.id !== currentUser?.uid);
       return otherParticipant?.name || 'Unknown';
     }
-    return `Group (${conversation.participants.length} members)`;
+    return `Group (${conversation.participants?.length || 0} members)`;
   }, [currentUser]);
 
   const getUnreadCount = useCallback(() => state.unreadCount, [state.unreadCount]);
@@ -853,4 +900,10 @@ export function useMessaging() {
     throw new Error('useMessaging must be used within a MessagingProvider');
   }
   return context;
+}
+
+// Safe version that returns null if provider not available
+export function useMessagingSafe() {
+  const context = useContext(MessagingContext);
+  return context || null;
 }

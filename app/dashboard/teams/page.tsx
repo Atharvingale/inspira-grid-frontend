@@ -64,6 +64,8 @@ export default function TeamsPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showManageModal, setShowManageModal] = useState(false);
   const [selectedProjectForManage, setSelectedProjectForManage] = useState<Project | null>(null);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const [projectStats, setProjectStats] = useState<{
     totalProjects: number;
     activeProjects: number;
@@ -80,8 +82,8 @@ export default function TeamsPage() {
         
         // Load user's projects and team projects in parallel
         const [myProjectsRes, teamProjectsRes] = await Promise.allSettled([
-          apiClient.get('/api/projects/user/my-projects'),
-          apiClient.get('/api/projects/user/team-projects')
+          apiClient.get('/projects/user/my-projects'),
+          apiClient.get('/projects/user/team-projects')
         ]);
         
         // Process my projects
@@ -177,9 +179,28 @@ export default function TeamsPage() {
     );
   };
 
-  const handleManageTeam = (project: Project) => {
+  const handleManageTeam = async (project: Project) => {
     setSelectedProjectForManage(project);
     setShowManageModal(true);
+    
+    // Fetch team members
+    try {
+      setLoadingMembers(true);
+      const response = await apiClient.get(`/projects/${project.id}`);
+      const projectData = (response as any)?.project;
+      
+      if (projectData && projectData.teamMembers) {
+        setTeamMembers(projectData.teamMembers);
+      } else {
+        setTeamMembers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      setTeamMembers([]);
+      toast.error('Failed to load team members');
+    } finally {
+      setLoadingMembers(false);
+    }
   };
 
   const sortProjects = (projects: Project[]) => {
@@ -887,17 +908,53 @@ export default function TeamsPage() {
                       </div>
                     </div>
 
-                    {/* Team Members Placeholder */}
-                    {selectedProjectForManage.currentTeamSize > 1 ? (
-                      <div className="text-center py-8 text-text-tertiary">
-                        <Users className="w-12 h-12 mx-auto mb-3 text-text-tertiary" />
-                        <p>Team members will be displayed here</p>
-                        <p className="text-sm mt-1">Connect to backend to fetch team data</p>
+                    {/* Team Members */}
+                    {loadingMembers ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
                       </div>
+                    ) : teamMembers.length > 0 ? (
+                      teamMembers.map((member, index) => (
+                        <motion.div
+                          key={member.userId || index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex items-center justify-between p-3 bg-dark-surface/20 rounded-lg border border-dark-border hover:bg-dark-surface/40 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {member.photoURL ? (
+                              <img
+                                src={member.photoURL}
+                                alt={member.name}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-purple to-accent-blue flex items-center justify-center">
+                                <span className="text-white font-bold">
+                                  {member.name?.[0] || '?'}
+                                </span>
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium text-text-primary">{member.name || 'Team Member'}</p>
+                              <p className="text-sm text-text-tertiary">{member.role || 'Member'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-accent-purple/20 text-accent-purple rounded-full text-xs font-medium">
+                              {member.role || 'Member'}
+                            </span>
+                            {member.isAdmin && (
+                              <Shield className="w-4 h-4 text-accent-cyan" />
+                            )}
+                          </div>
+                        </motion.div>
+                      ))
                     ) : (
                       <div className="text-center py-8 text-text-tertiary">
                         <Users className="w-12 h-12 mx-auto mb-3 text-text-tertiary" />
-                        <p>No team members yet</p>
+                        <p>No additional team members yet</p>
                         <p className="text-sm mt-1">Invite collaborators to join your project</p>
                       </div>
                     )}

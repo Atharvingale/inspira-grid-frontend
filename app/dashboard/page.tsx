@@ -97,10 +97,10 @@ export default function DashboardPage() {
         
         // Load user's projects and applications in parallel
         const [myProjectsRes, teamProjectsRes, applicationsRes, recentProjectsRes] = await Promise.allSettled([
-          apiClient.get('/api/projects/user/my-projects'),
-          apiClient.get('/api/projects/user/team-projects'),
-          apiClient.get('/api/applications/my-applications'),
-          apiClient.get('/api/projects?limit=6&orderBy=createdAt&orderDirection=desc')
+          apiClient.get('/projects/user/my-projects'),
+          apiClient.get('/projects/user/team-projects'),
+          apiClient.get('/applications/my-applications'),
+          apiClient.get('/projects?limit=6&orderBy=createdAt&orderDirection=desc')
         ]);
         
         // Log any failed requests

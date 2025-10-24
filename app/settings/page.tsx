@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Bell, Lock, Shield, Info, Check, Save, Mail, Key, User, Download, Trash2 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { useAuth } from "@/lib/AuthContext";
+import { toast } from "react-toastify";
+import Button from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 export default function SettingsPage() {
   const [user, loading] = useAuthState(auth);
+  const { userProfile, updateUserProfile } = useAuth();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('notifications');
   
@@ -36,61 +43,147 @@ export default function SettingsPage() {
   });
   const [_newEmail, _setNewEmail] = useState('');
 
+  // Load settings from user profile
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.notificationSettings) {
+        setNotifications(userProfile.notificationSettings);
+      }
+      if (userProfile.privacySettings) {
+        setPrivacy(userProfile.privacySettings);
+      }
+    }
+  }, [userProfile]);
+
   const saveNotificationSettings = async () => {
-    setSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // TODO: Save to user profile
-    setSaving(false);
+    if (!user) return;
+    
+    try {
+      setSaving(true);
+      const success = await updateUserProfile(user.uid, {
+        notificationSettings: notifications
+      });
+      
+      if (success) {
+        toast.success('Notification settings saved successfully!');
+      } else {
+        toast.error('Failed to save notification settings');
+      }
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+      toast.error('Failed to save notification settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const savePrivacySettings = async () => {
-    setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // TODO: Save to user profile
-    setSaving(false);
+    if (!user) return;
+    
+    try {
+      setSaving(true);
+      const success = await updateUserProfile(user.uid, {
+        privacySettings: privacy
+      });
+      
+      if (success) {
+        toast.success('Privacy settings saved successfully!');
+      } else {
+        toast.error('Failed to save privacy settings');
+      }
+    } catch (error) {
+      console.error('Error saving privacy settings:', error);
+      toast.error('Failed to save privacy settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
-    return <div className="mx-auto max-w-xl px-4 py-10">Loading...</div>;
-  }
-
-  if (!user) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-10">
-        <p className="text-text-tertiary">Please log in to access settings.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-dark-darker via-dark to-dark-lighter">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <div className="w-16 h-16 border-4 border-brand-primary border-t-transparent rounded-full mx-auto mb-4 animate-spin" />
+          <p className="text-text-tertiary">Loading settings...</p>
+        </motion.div>
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-3xl font-bold text-text-primary">Account Settings</h1>
-      <p className="mt-2 text-text-secondary">Manage your account preferences and privacy settings.</p>
-
-      {/* Tab Navigation */}
-      <div className="mt-8 border-b border-white/10">
-        <nav className="flex space-x-8">
-          {[
-            { id: 'notifications', label: 'Notifications' },
-            { id: 'privacy', label: 'Privacy' },
-            { id: 'security', label: 'Security' },
-            { id: 'about', label: 'About' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg transition-all duration-200 ${
-                activeTab === tab.id
-                  ? 'border-brand-primary text-brand-primary bg-brand-primary/5'
-                  : 'border-transparent text-text-tertiary hover:text-text-secondary hover:bg-white/5'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-dark-darker via-dark to-dark-lighter">
+        <Card className="p-8 text-center">
+          <Lock className="w-12 h-12 text-text-muted mx-auto mb-4" />
+          <p className="text-text-primary text-lg font-semibold mb-2">Authentication Required</p>
+          <p className="text-text-tertiary">Please log in to access settings.</p>
+        </Card>
       </div>
+    );
+  }
+
+  const tabs = [
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'privacy', label: 'Privacy', icon: Shield },
+    { id: 'security', label: 'Security', icon: Lock },
+    { id: 'about', label: 'About', icon: Info }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-lighter">
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="p-3 bg-brand-primary/10 rounded-xl">
+              <User className="w-6 h-6 text-brand-primary" />
+            </div>
+            <h1 className="text-4xl font-bold text-text-primary">Account Settings</h1>
+          </div>
+          <p className="mt-2 text-text-secondary text-lg">Manage your account preferences and privacy settings.</p>
+        </motion.div>
+
+        {/* Tab Navigation */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mt-8"
+        >
+          <Card className="p-2 backdrop-blur-sm">
+            <nav className="flex space-x-2">
+              {tabs.map((tab, index) => {
+                const Icon = tab.icon;
+                return (
+                  <motion.button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all duration-200 flex items-center justify-center space-x-2 ${
+                      activeTab === tab.id
+                        ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20'
+                        : 'text-text-tertiary hover:text-text-primary hover:bg-white/5'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + index * 0.1 }}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </motion.button>
+                );
+              })}
+            </nav>
+          </Card>
+        </motion.div>
 
       {/* Tab Content */}
       <div className="mt-8">
@@ -118,13 +211,29 @@ export default function SettingsPage() {
               ))}
             </div>
             
-            <button
+            <Button
               onClick={saveNotificationSettings}
               disabled={saving}
-              className="mt-8 rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary px-6 py-3 text-white font-semibold hover:shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5 disabled:opacity-50 transition-all duration-200"
+              variant="primary"
+              size="lg"
+              className="mt-8"
             >
-              {saving ? "Saving..." : "Save Notification Settings"}
-            </button>
+              {saving ? (
+                <>
+                  <motion.div
+                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Notification Settings
+                </>
+              )}
+            </Button>
           </div>
         )}
 
@@ -168,13 +277,29 @@ export default function SettingsPage() {
               </div>
             </div>
             
-            <button
+            <Button
               onClick={savePrivacySettings}
               disabled={saving}
-              className="mt-8 rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary px-6 py-3 text-white font-semibold hover:shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5 disabled:opacity-50 transition-all duration-200"
+              variant="primary"
+              size="lg"
+              className="mt-8"
             >
-              {saving ? "Saving..." : "Save Privacy Settings"}
-            </button>
+              {saving ? (
+                <>
+                  <motion.div
+                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Privacy Settings
+                </>
+              )}
+            </Button>
           </div>
         )}
 
@@ -294,6 +419,7 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

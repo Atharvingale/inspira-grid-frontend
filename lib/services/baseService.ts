@@ -35,7 +35,8 @@ class BaseService {
   protected baseUrl: string;
 
   constructor(basePath?: string) {
-    this.baseUrl = basePath || process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+    // Check for undefined explicitly - empty string '' is intentional and means no base path
+    this.baseUrl = basePath !== undefined ? basePath : (process.env.NEXT_PUBLIC_API_BASE_URL || '/api');
   }
 
   /**
@@ -75,8 +76,14 @@ class BaseService {
         success: true,
         data,
       } as ApiResponse<T>;
-    } catch (error) {
-      console.error(`API Error - ${method} ${endpoint}:`, error);
+    } catch (error: any) {
+      // Suppress logging for expected GitHub profile 404 (user hasn't connected GitHub yet)
+      const isExpectedGitHubError = endpoint === '/github/profile' && error?.message?.includes('404');
+      
+      if (!isExpectedGitHubError) {
+        console.error(`API Error - ${method} ${endpoint}:`, error);
+      }
+      
       throw error;
     }
   }

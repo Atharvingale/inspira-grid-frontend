@@ -14,7 +14,7 @@ import type {
  */
 class UserService extends BaseService {
   constructor() {
-    super('/api');
+    super(''); // BaseURL already includes /api from API_BASE_URL
   }
 
   /**

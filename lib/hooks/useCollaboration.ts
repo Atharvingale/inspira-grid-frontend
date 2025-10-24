@@ -40,6 +40,32 @@ export const useCollaboration = (
   contextType: string,
   autoJoin: boolean = true
 ): UseCollaborationReturn => {
+  // TEMPORARILY DISABLED - Collaboration features require Socket.io or migration to Pusher
+  // See COLLABORATION_MIGRATION.md for details
+  
+  return {
+    session: null,
+    isConnected: false,
+    connectionStatus: 'disconnected',
+    activeUsers: [],
+    cursors: [],
+    awareness: null,
+    documentState: null,
+    editingIndicators: [],
+    conflicts: [],
+    actions: {
+      joinSession: async () => { console.warn('Collaboration disabled'); },
+      leaveSession: async () => {},
+      sendOperation: () => {},
+      moveCursor: () => {},
+      updatePresence: () => {},
+      startEditing: async () => {},
+      stopEditing: async () => {},
+      broadcastEvent: () => {}
+    }
+  };
+  
+  /* ORIGINAL CODE - TEMPORARILY DISABLED
   // State
   const [session, setSession] = useState<CollaborationSession | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -398,6 +424,7 @@ export const useCollaboration = (
       broadcastEvent
     }
   };
+  END DISABLED CODE */
 };
 
 // =====================================
@@ -409,6 +436,25 @@ export const useActivityFeed = (
   contextType?: string,
   autoLoad: boolean = true
 ): UseActivityFeedReturn => {
+  // TEMPORARILY DISABLED - Activity feed requires Socket.io or migration to Pusher
+  
+  return {
+    activities: [],
+    unreadCount: 0,
+    loading: false,
+    hasMore: false,
+    actions: {
+      loadActivities: async () => { console.warn('Activity feed disabled'); },
+      loadMore: async () => {},
+      markAsRead: async () => {},
+      markAllAsRead: async () => {},
+      addReaction: async () => {},
+      removeReaction: async () => {},
+      createActivity: async () => {}
+    }
+  };
+  
+  /* ORIGINAL CODE - TEMPORARILY DISABLED
   const [activities, setActivities] = useState<ActivityFeedItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -599,6 +645,7 @@ export const useActivityFeed = (
       createActivity
     }
   };
+  END DISABLED CODE */
 };
 
 // =====================================
@@ -610,6 +657,24 @@ export const useComments = (
   contextType: string,
   autoLoad: boolean = true
 ): UseCommentsReturn => {
+  // TEMPORARILY DISABLED - Comments require Socket.io or migration to Pusher
+  
+  return {
+    comments: [],
+    threads: [],
+    loading: false,
+    actions: {
+      loadComments: async () => { console.warn('Comments disabled'); },
+      addComment: async () => { return ''; },
+      updateComment: async () => {},
+      deleteComment: async () => {},
+      resolveComment: async () => {},
+      addReaction: async () => {},
+      removeReaction: async () => {}
+    }
+  };
+  
+  /* ORIGINAL CODE - TEMPORARILY DISABLED
   const [comments, setComments] = useState<Comment[]>([]);
   const [threads, setThreads] = useState<CommentThread[]>([]);
   const [loading, setLoading] = useState(false);
@@ -819,6 +884,7 @@ export const useComments = (
       removeReaction
     }
   };
+  END DISABLED CODE */
 };
 
 // =====================================
@@ -826,6 +892,19 @@ export const useComments = (
 // =====================================
 
 export const useLiveSelection = (contextId: string, contextType: string) => {
+  // TEMPORARILY DISABLED - Live selection requires Socket.io or migration to Pusher
+  
+  return {
+    selections: [],
+    highlights: [],
+    actions: {
+      updateSelection: async () => { console.warn('Live selection disabled'); },
+      clearSelection: async () => {},
+      createHighlight: async () => { return ''; }
+    }
+  };
+  
+  /* ORIGINAL CODE - TEMPORARILY DISABLED
   const [selections, setSelections] = useState<LiveSelection[]>([]);
   const [highlights, setHighlights] = useState<SharedHighlight[]>([]);
 
@@ -921,4 +1000,5 @@ export const useLiveSelection = (contextId: string, contextType: string) => {
       createHighlight
     }
   };
+  END DISABLED CODE */
 };

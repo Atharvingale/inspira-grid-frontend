@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
-import { SocketProvider } from "@/lib/SocketContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Navbar from "@/components/layout/Navbar";
+import { MessagingProvider } from "@/lib/contexts/MessagingContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -11,15 +11,15 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <SocketProvider>
-      <ProtectedRoute>
+    <ProtectedRoute>
+      <MessagingProvider>
         <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-surface">
           <Navbar />
           <main className="pb-8">
             {children}
           </main>
         </div>
-      </ProtectedRoute>
-    </SocketProvider>
+      </MessagingProvider>
+    </ProtectedRoute>
   );
 }

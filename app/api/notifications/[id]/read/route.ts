@@ -1,0 +1,50 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/middleware/auth';
+import NotificationModel from '@/lib/models/Notification';
+
+// PATCH /api/notifications/[id]/read - Mark notification as read
+export const PATCH = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+  try {
+    const { id } = params;
+
+    // First check if notification exists and belongs to user
+    const notification = await NotificationModel.getById(id);
+    if (!notification) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Notification not found'
+        },
+        { status: 404 }
+      );
+    }
+
+    if (notification.userId !== user.uid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Access denied'
+        },
+        { status: 403 }
+      );
+    }
+
+    const updatedNotification = await NotificationModel.markAsRead(id);
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Notification marked as read',
+      data: updatedNotification
+    });
+  } catch (error: any) {
+    console.error('Error marking notification as read:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Error marking notification as read',
+        error: error.message
+      },
+      { status: 500 }
+    );
+  }
+});

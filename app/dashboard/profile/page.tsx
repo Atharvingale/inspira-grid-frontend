@@ -1,33 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/lib/AuthContext';
-import { apiClient } from '@/lib/api';
 import { githubService, type GitHubProfile } from '@/lib/services/githubService';
 import Loading from '@/components/common/Loading';
 import { motion } from 'framer-motion';
-import { 
-  Camera, 
-  Upload, 
-  X, 
-  Globe, 
-  Github as GithubIcon, 
-  Linkedin, 
-  Twitter,
-  MapPin,
-  Briefcase,
-  Star,
-  Award,
-  Zap,
-  Check,
-  Plus,
-  Trash2,
-  Save,
-  User,
-  Mail,
-  Link as LinkIcon
-} from 'lucide-react';
+import { User, MapPin, Globe, Github, Linkedin, Star, Award, Briefcase, Calendar, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -52,14 +31,18 @@ const Profile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-  const [twitter, setTwitter] = useState('');
   
   // GitHub state
   const [githubProfile, setGitHubProfile] = useState<GitHubProfile | null>(null);
   const [githubLoading, setGitHubLoading] = useState(false);
   const [isConnectingGitHub, setIsConnectingGitHub] = useState(false);
+
+  // Location search state
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const locationDropdownRef = useRef<HTMLDivElement>(null);
 
   const commonSkills = [
     'JavaScript', 'Python', 'React', 'Node.js', 'TypeScript',
@@ -72,43 +55,114 @@ const Profile = () => {
     'Mobile Development', 'React Native', 'Flutter', 'Swift', 'Kotlin'
   ];
 
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      if (currentUser) {
-        try {
-          const userData = await apiClient.get('/api/users/profile');
-          setProfile(userData);
-          setSelectedSkills(userData.skills || []);
-        } catch (error) {
-          console.error('Error loading profile:', error);
-          // Fallback to localStorage if API fails
-          try {
-            const savedProfile = localStorage.getItem(`profile_${currentUser.uid}`);
-            if (savedProfile) {
-              const parsedProfile = JSON.parse(savedProfile);
-              setProfile(parsedProfile);
-              setSelectedSkills(parsedProfile.skills || []);
-            }
-          } catch (localError) {
-            // Create initial profile if all else fails
-            const initialProfile: UserProfile = {
-              id: currentUser.uid,
-              email: currentUser.email || '',
-              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-              profileComplete: false,
-              skills: [],
-              availability: 'available'
-            };
-            setProfile(initialProfile);
-          }
+  // Search locations using OpenStreetMap Nominatim API
+  const searchLocations = async (query: string) => {
+    if (!query || query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    try {
+      setIsSearchingLocation(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          },
         }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const suggestions = data.map((item: any) => {
+          // Format: City, State, Country or City, Country
+          const city = item.address?.city || item.address?.town || item.address?.village;
+          const state = item.address?.state;
+          const country = item.address?.country;
+          
+          if (city && state && country) {
+            return `${city}, ${state}, ${country}`;
+          } else if (city && country) {
+            return `${city}, ${country}`;
+          } else {
+            return item.display_name.split(',').slice(0, 3).join(',');
+          }
+        });
+        
+        // Remove duplicates
+        const uniqueSuggestions = [...new Set(suggestions)];
+        setLocationSuggestions(uniqueSuggestions);
+      }
+    } catch (error) {
+      console.error('Error searching locations:', error);
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  // Debounce location search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (locationQuery) {
+        searchLocations(locationQuery);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [locationQuery]);
+
+  // Click outside to close location dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
       }
     };
-    
-    if (currentUser) {
-      loadUserProfile();
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (userProfile) {
+      setProfile(userProfile as UserProfile);
+      setSelectedSkills(userProfile.skills || []);
+      setLocationQuery(userProfile.location || '');
+    } else if (currentUser) {
+      // Try to load from localStorage as fallback
+      try {
+        const savedProfile = localStorage.getItem(`profile_${currentUser.uid}`);
+        if (savedProfile) {
+          const parsedProfile = JSON.parse(savedProfile);
+          setProfile(parsedProfile);
+          setSelectedSkills(parsedProfile.skills || []);
+        } else {
+          // Create initial profile from currentUser data
+          const initialProfile: UserProfile = {
+            id: currentUser.uid,
+            email: currentUser.email || '',
+            displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            profileComplete: false,
+            skills: [],
+            availability: 'available'
+          };
+          setProfile(initialProfile);
+        }
+      } catch (error) {
+        // Failed to load profile from localStorage - create initial profile
+        const initialProfile: UserProfile = {
+          id: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          profileComplete: false,
+          skills: [],
+          availability: 'available'
+        };
+        setProfile(initialProfile);
+      }
     }
-  }, [currentUser]);
+  }, [userProfile, currentUser]);
 
   // Check for OAuth callback status
   useEffect(() => {
@@ -160,14 +214,20 @@ const Profile = () => {
         timeoutPromise
       ]) as any;
       
-      if (response.success) {
-        setGitHubProfile(response.data!);
+      console.log('GitHub Profile Response:', response);
+      
+      if (response.success && response.data) {
+        // Handle potential double-wrapped response from baseService
+        const profileData = (response.data as any)?.data || response.data;
+        console.log('GitHub Profile Data:', profileData);
+        setGitHubProfile(profileData);
       } else {
         // User doesn't have GitHub connected
+        console.log('GitHub not connected or no data');
         setGitHubProfile(null);
       }
     } catch (error: any) {
-      console.log('GitHub profile not connected or unavailable');
+      console.log('GitHub profile not connected or unavailable:', error);
       setGitHubProfile(null);
     } finally {
       setGitHubLoading(false);
@@ -238,36 +298,18 @@ const Profile = () => {
     }
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-        toast.success('Avatar uploaded! Save to apply changes.');
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleLocationSelect = (location: string) => {
+    setLocationQuery(location);
+    setProfile(prev => prev ? { ...prev, location } : null);
+    setShowLocationDropdown(false);
+    setLocationSuggestions([]);
   };
 
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('Image size should be less than 10MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerPreview(reader.result as string);
-        toast.success('Banner uploaded! Save to apply changes.');
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocationQuery(value);
+    setProfile(prev => prev ? { ...prev, location: value } : null);
+    setShowLocationDropdown(true);
   };
 
   const handleSave = async () => {
@@ -276,24 +318,14 @@ const Profile = () => {
     try {
       setSaving(true);
       
-      // Use API endpoint to save profile
-      const result = await apiClient.post('/api/users/profile', {
-        displayName: profile.displayName,
-        bio: profile.bio,
-        location: profile.location,
-        website: profile.website,
-        github: profile.github,
-        linkedin: profile.linkedin,
-        skills: selectedSkills,
-        experience: profile.experience,
-        availability: profile.availability
-      });
-      
-      // Update local state
-      setProfile(result.profile);
+      // Simulate async operation
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Save to localStorage for persistence
-      localStorage.setItem(`profile_${currentUser.uid}`, JSON.stringify(result.profile));
+      localStorage.setItem(`profile_${currentUser.uid}`, JSON.stringify(profile));
+      
+      // Update the auth context
+      await updateUserProfile?.(currentUser.uid, profile);
       
       toast.success('Profile updated successfully!');
     } catch (error: any) {
@@ -308,325 +340,125 @@ const Profile = () => {
     return <Loading message="Loading profile..." />;
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-lighter">
-      <div className="max-w-6xl mx-auto">
-        {/* Enhanced Banner Section with Upload */}
-        <motion.div 
-          className="relative h-72 bg-gradient-to-r from-brand-primary via-purple-600 to-brand-secondary rounded-b-3xl overflow-hidden shadow-2xl"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          {bannerPreview && (
-            <img 
-              src={bannerPreview} 
-              alt="Banner" 
-              className="w-full h-full object-cover"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-dark-darker/80" />
-          
-          {/* Floating Particles Animation */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-20 left-10 w-3 h-3 bg-white/20 rounded-full animate-ping" />
-            <div className="absolute top-32 right-20 w-2 h-2 bg-white/30 rounded-full animate-pulse" />
-            <div className="absolute bottom-20 left-20 w-4 h-4 bg-white/10 rounded-full animate-bounce" />
-          </div>
-          
-          {/* Banner Upload Button */}
-          <label className="absolute top-6 right-6 cursor-pointer group">
-            <motion.div 
-              className="flex items-center space-x-3 px-5 py-3 backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl text-white hover:bg-white/30 transition-all shadow-xl group-hover:shadow-2xl"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Camera className="w-5 h-5" />
-              <span className="text-sm font-semibold">Change Cover</span>
-            </motion.div>
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={handleBannerUpload}
-              className="hidden" 
-            />
-          </label>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
 
-          {/* Enhanced Avatar Section */}
-          <div className="absolute -bottom-24 left-8">
-            <div className="relative group">
-              {/* Avatar Ring Animation */}
-              <div className="absolute inset-0 w-48 h-48 rounded-full border-4 border-gradient-to-r from-brand-primary to-brand-secondary opacity-30 animate-pulse" />
-              
-              {/* Avatar Image */}
-              <motion.div 
-                className="relative w-48 h-48 rounded-full border-6 border-white bg-gradient-to-br from-brand-primary to-brand-secondary overflow-hidden shadow-2xl"
-                whileHover={{ scale: 1.03 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                {avatarPreview || currentUser?.photoURL ? (
-                  <img 
-                    src={avatarPreview || currentUser?.photoURL || ''} 
-                    alt="Avatar" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-24 h-24 text-white" />
-                  </div>
-                )}
-                
-                {/* Profile completion indicator */}
-                <div className="absolute bottom-2 right-2">
-                  <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
-                    profile.profileComplete ? 'bg-emerald-500' : 'bg-amber-500'
-                  }`}>
-                    {profile.profileComplete ? (
-                      <Check className="w-3 h-3 text-white" />
-                    ) : (
-                      <span className="w-2 h-2 bg-white rounded-full" />
-                    )}
-                  </div>
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900 p-4 md:p-8">
+      <motion.div 
+        className="max-w-7xl mx-auto"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Header Section with Profile Card */}
+        <motion.div variants={itemVariants} className="mb-8">
+          <div className="bg-gradient-to-r from-brand-primary/20 via-brand-secondary/20 to-purple-600/20 backdrop-blur-xl rounded-2xl p-8 border border-brand-primary/20 shadow-2xl">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              {/* Avatar */}
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-4xl font-bold text-white shadow-lg">
+                  {profile.displayName?.charAt(0).toUpperCase() || 'U'}
                 </div>
-              </motion.div>
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-4 border-slate-950 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                </div>
+              </div>
               
-              {/* Avatar Upload Button */}
-              <label className="absolute bottom-6 right-4 cursor-pointer">
-                <motion.div 
-                  className="p-4 backdrop-blur-xl bg-brand-primary/90 rounded-full shadow-xl hover:bg-brand-primary transition-all group-hover:scale-110"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Camera className="w-6 h-6 text-white" />
-                </motion.div>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleAvatarUpload}
-                  className="hidden" 
-                />
-              </label>
+              {/* Profile Info */}
+              <div className="flex-1">
+                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                  {profile.displayName || 'Your Name'}
+                </h1>
+                <p className="text-gray-300 mb-3">{profile.email}</p>
+                <div className="flex flex-wrap gap-3">
+                  {profile.location && (
+                    <span className="inline-flex items-center px-3 py-1 bg-slate-800/60 rounded-full text-sm text-gray-300">
+                      <MapPin className="w-3.5 h-3.5 mr-1.5" />
+                      {profile.location}
+                    </span>
+                  )}
+                  {profile.availability && (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      profile.availability === 'available' ? 'bg-green-500/20 text-green-400' :
+                      profile.availability === 'busy' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      <span className="w-2 h-2 rounded-full mr-2 ${
+                        profile.availability === 'available' ? 'bg-green-400' :
+                        profile.availability === 'busy' ? 'bg-yellow-400' :
+                        'bg-red-400'
+                      }"></span>
+                      {profile.availability.charAt(0).toUpperCase() + profile.availability.slice(1)}
+                    </span>
+                  )}
+                  {profile.experience && (
+                    <span className="inline-flex items-center px-3 py-1 bg-blue-500/20 rounded-full text-sm text-blue-400">
+                      <Award className="w-3.5 h-3.5 mr-1.5" />
+                      {profile.experience.charAt(0).toUpperCase() + profile.experience.slice(1)}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Enhanced Profile Info Bar */}
-        <div className="px-8 pt-32 pb-8">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
-            <div className="flex-1">
-              <motion.div 
-                className="mb-6"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <h1 className="text-5xl font-bold text-white mb-3 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  {profile.displayName || 'Your Name'}
-                </h1>
-                <div className="flex items-center gap-2 mb-4">
-                  {!profile.profileComplete && (
-                    <motion.div 
-                      className="flex items-center gap-2 px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-300"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      <Zap className="w-3 h-3" />
-                      <span className="text-xs font-medium">Complete your profile</span>
-                    </motion.div>
-                  )}
-                  {profile.profileComplete && (
-                    <motion.div 
-                      className="flex items-center gap-2 px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-300"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      <Check className="w-3 h-3" />
-                      <span className="text-xs font-medium">Profile Complete</span>
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="flex items-center space-x-3 px-4 py-3 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
-                  <div className="p-2 bg-brand-primary/20 rounded-lg">
-                    <Mail className="w-4 h-4 text-brand-light" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-tertiary">Email</p>
-                    <p className="text-sm text-text-secondary font-medium">{profile.email}</p>
-                  </div>
-                </div>
-                
-                {profile.location && (
-                  <div className="flex items-center space-x-3 px-4 py-3 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
-                    <div className="p-2 bg-accent-blue/20 rounded-lg">
-                      <MapPin className="w-4 h-4 text-accent-blue" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-tertiary">Location</p>
-                      <p className="text-sm text-text-secondary font-medium">{profile.location}</p>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="flex items-center space-x-3 px-4 py-3 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
-                  <div className={`p-2 rounded-lg ${
-                    profile.availability === 'available' ? 'bg-emerald-500/20' :
-                    profile.availability === 'busy' ? 'bg-amber-500/20' :
-                    'bg-red-500/20'
-                  }`}>
-                    <div className={`w-4 h-4 rounded-full ${
-                      profile.availability === 'available' ? 'bg-emerald-400' :
-                      profile.availability === 'busy' ? 'bg-amber-400' :
-                      'bg-red-400'
-                    } animate-pulse`} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-tertiary">Status</p>
-                    <p className={`text-sm font-medium capitalize ${
-                      profile.availability === 'available' ? 'text-emerald-400' :
-                      profile.availability === 'busy' ? 'text-amber-400' :
-                      'text-red-400'
-                    }`}>{profile.availability || 'available'}</p>
-                  </div>
-                </div>
-              </motion.div>
-              
-              {profile.bio && (
-                <motion.div 
-                  className="mb-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <div className="px-6 py-4 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
-                    <h3 className="text-sm font-semibold text-text-primary mb-2 flex items-center">
-                      <User className="w-4 h-4 mr-2" />
-                      About Me
-                    </h3>
-                    <p className="text-text-secondary text-sm leading-relaxed">{profile.bio}</p>
-                  </div>
-                </motion.div>
-              )}
-              
-              {selectedSkills.length > 0 && (
-                <motion.div 
-                  className="mb-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <div className="px-6 py-4 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
-                    <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center">
-                      <Star className="w-4 h-4 mr-2" />
-                      Skills ({selectedSkills.length})
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSkills.slice(0, 8).map(skill => (
-                        <span key={skill} className="px-3 py-1 bg-brand-primary/20 text-brand-light rounded-lg text-xs font-medium border border-brand-primary/30">
-                          {skill}
-                        </span>
-                      ))}
-                      {selectedSkills.length > 8 && (
-                        <span className="px-3 py-1 bg-dark-surface/50 text-text-tertiary rounded-lg text-xs font-medium">
-                          +{selectedSkills.length - 8} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-            
-            <motion.div
-              className="flex flex-col gap-3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <motion.button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-2xl hover:shadow-xl hover:shadow-brand-primary/30 disabled:opacity-50 transition-all font-semibold"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Save className="w-5 h-5" />
-                <span>{saving ? 'Saving...' : 'Save Changes'}</span>
-              </motion.button>
-              
-              {/* Quick Actions */}
-              <div className="flex flex-col gap-2">
-                <motion.button
-                  onClick={() => setActiveTab('github')}
-                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-dark-card/50 border border-dark-border/50 text-text-secondary rounded-xl hover:bg-dark-surface/50 hover:text-text-primary transition-all"
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <GithubIcon className="w-4 h-4" />
-                  <span className="text-sm font-medium">GitHub</span>
-                </motion.button>
-                
-                <motion.button
-                  onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
-                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-dark-card/50 border border-dark-border/50 text-text-secondary rounded-xl hover:bg-dark-surface/50 hover:text-text-primary transition-all"
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <Award className="w-4 h-4" />
-                  <span className="text-sm font-medium">Skills</span>
-                </motion.button>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Content Section */}
-        <div className="px-8 pb-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white">Edit Profile</h2>
-            <p className="text-text-tertiary mt-1">Customize your profile and showcase your skills</p>
-          </div>
-
         {/* Tabs */}
-        <div className="border-b border-dark-border/50 mb-6">
-          <nav className="-mb-px flex space-x-8">
+        <motion.div variants={itemVariants} className="mb-8">
+          <div className="bg-slate-900/60 backdrop-blur-xl rounded-xl p-2 border border-slate-700/50 shadow-xl inline-flex gap-2">
             {[
-              { key: 'profile', label: 'Profile Information' },
-              { key: 'github', label: 'GitHub Integration' },
-              { key: 'settings', label: 'Settings' }
+              { key: 'profile', label: 'Profile', icon: User },
+              { key: 'github', label: 'GitHub', icon: Github },
+              { key: 'settings', label: 'Settings', icon: Briefcase }
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`relative px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
                   activeTab === tab.key
-                    ? 'border-brand-primary text-brand-primary'
-                    : 'border-transparent text-text-tertiary hover:text-text-secondary hover:border-dark-border'
+                    ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg shadow-brand-primary/30'
+                    : 'text-gray-400 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
+                <tab.icon className="w-4 h-4" />
                 {tab.label}
               </button>
             ))}
-          </nav>
-        </div>
+          </div>
+        </motion.div>
 
         {/* Profile Information Tab */}
         {activeTab === 'profile' && (
-          <div className="bg-dark-card/80 rounded-lg shadow-sm p-6">
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div>
-                <h2 className="text-lg font-semibold text-text-primary mb-4">Basic Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <motion.div 
+            variants={itemVariants}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          >
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Basic Information Card */}
+              <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-brand-primary/20 rounded-lg">
+                    <User className="w-5 h-5 text-brand-primary" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Basic Information</h2>
+                </div>
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
                       Display Name *
                     </label>
                     <input
@@ -634,159 +466,249 @@ const Profile = () => {
                       name="displayName"
                       value={profile.displayName || ''}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                      placeholder="Your display name"
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder:text-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                      placeholder="Enter your display name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
                       Email
                     </label>
-                    <input
-                      type="email"
-                      value={profile.email || currentUser?.email || ''}
-                      disabled
-                      className="w-full px-3 py-2 border border-dark-border rounded-md bg-dark-surface/50 text-text-tertiary backdrop-blur-sm"
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={profile.email || currentUser?.email || ''}
+                        disabled
+                        className="w-full px-4 py-3 bg-slate-800/30 border border-slate-600/30 rounded-xl text-gray-400 cursor-not-allowed"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-slate-700/50 px-2 py-1 rounded text-gray-400">Verified</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bio Card */}
+              <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                    <Briefcase className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">About</h2>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative" ref={locationDropdownRef}>
+                      <label className="block text-sm font-semibold text-gray-300 mb-2">
+                        <MapPin className="w-4 h-4 inline mr-1" />
+                        Location
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={locationQuery}
+                          onChange={handleLocationChange}
+                          onFocus={() => setShowLocationDropdown(true)}
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder:text-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                          placeholder="Search for your city..."
+                        />
+                        {isSearchingLocation && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-primary"></div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Location Dropdown */}
+                      {showLocationDropdown && locationSuggestions.length > 0 && (
+                        <div className="absolute z-50 w-full mt-2 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
+                          {locationSuggestions.map((location, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleLocationSelect(location)}
+                              className="w-full px-4 py-3 text-left text-white hover:bg-slate-700 transition-colors flex items-center gap-2 border-b border-slate-700 last:border-b-0"
+                            >
+                              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              <span className="text-sm">{location}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-300 mb-2">
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        Availability
+                      </label>
+                      <select
+                        name="availability"
+                        value={profile.availability || 'available'}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                      >
+                        <option value="available" className="bg-slate-800">🟢 Available</option>
+                        <option value="busy" className="bg-slate-800">🟡 Busy</option>
+                        <option value="unavailable" className="bg-slate-800">🔴 Unavailable</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Bio
+                    </label>
+                    <textarea
+                      name="bio"
+                      value={profile.bio || ''}
+                      onChange={handleInputChange}
+                      rows={5}
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder:text-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all resize-none"
+                      placeholder="Tell others about yourself, your interests, and what you're looking for in collaboration..."
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Bio and Location */}
-              <div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      name="location"
-                      value={profile.location || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                      placeholder="City, Country"
-                    />
+              {/* Social Links Card */}
+              <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-cyan-500/20 rounded-lg">
+                    <Globe className="w-5 h-5 text-cyan-400" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Availability
-                    </label>
-                    <select
-                      name="availability"
-                      value={profile.availability || 'available'}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                    >
-                      <option value="available">Available</option>
-                      <option value="busy">Busy</option>
-                      <option value="unavailable">Unavailable</option>
-                    </select>
-                  </div>
+                  <h2 className="text-xl font-bold text-white">Social Links</h2>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Bio
-                  </label>
-                  <textarea
-                    name="bio"
-                    value={profile.bio || ''}
-                    onChange={handleInputChange}
-                    rows={4}
-                    className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                    placeholder="Tell others about yourself, your interests, and what you're looking for in collaboration..."
-                  />
-                </div>
-              </div>
-
-              {/* Social Links */}
-              <div>
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Social Links</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      <Globe className="w-4 h-4 inline mr-1" />
                       Website
                     </label>
-                    <input
-                      type="url"
-                      name="website"
-                      value={profile.website || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                      placeholder="https://yourwebsite.com"
-                    />
+                    <div className="relative">
+                      <input
+                        type="url"
+                        name="website"
+                        value={profile.website || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 pl-10 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder:text-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                        placeholder="https://yourwebsite.com"
+                      />
+                      <ExternalLink className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      GitHub
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      <Github className="w-4 h-4 inline mr-1" />
+                      GitHub Username
                     </label>
-                    <input
-                      type="text"
-                      name="github"
-                      value={profile.github || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                      placeholder="username"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="github"
+                        value={profile.github || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 pl-10 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder:text-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                        placeholder="username"
+                      />
+                      <Github className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      LinkedIn
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      <Linkedin className="w-4 h-4 inline mr-1" />
+                      LinkedIn Username
                     </label>
-                    <input
-                      type="text"
-                      name="linkedin"
-                      value={profile.linkedin || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                      placeholder="username"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="linkedin"
+                        value={profile.linkedin || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 pl-10 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder:text-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                        placeholder="username"
+                      />
+                      <Linkedin className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Skills */}
-              <div>
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Skills</h3>
+            {/* Sidebar */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Skills Card */}
+              <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-pink-500/20 rounded-lg">
+                    <Star className="w-5 h-5 text-pink-400" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Skills</h2>
+                </div>
                 
                 {/* Skills Input */}
-                <div className="flex mb-3">
-                  <input
-                    type="text"
-                    value={skillInput}
-                    onChange={(e) => setSkillInput(e.target.value)}
-                    placeholder="Add a skill..."
-                    className="flex-1 px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-l-md text-white placeholder:text-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSkill();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddSkill}
-                    className="px-4 py-2 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-r-md hover:shadow-lg hover:shadow-brand-primary/30 transition-all"
-                  >
-                    Add
-                  </button>
+                <div className="mb-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={skillInput}
+                      onChange={(e) => setSkillInput(e.target.value)}
+                      placeholder="Add a skill..."
+                      className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder:text-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSkill();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddSkill}
+                      className="px-4 py-2 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-lg hover:shadow-lg hover:shadow-brand-primary/30 transition-all font-medium"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
 
+                {/* Selected Skills */}
+                {selectedSkills.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold text-gray-300 mb-3">Your skills ({selectedSkills.length}):</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSkills.map(skill => (
+                        <motion.span
+                          key={skill}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-brand-primary/20 to-brand-secondary/20 text-brand-light rounded-full text-sm border border-brand-primary/30 font-medium"
+                        >
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSkill(skill)}
+                            className="ml-2 text-brand-light hover:text-white transition-colors"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                          </button>
+                        </motion.span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Common Skills */}
-                <div className="mb-4">
-                  <p className="text-sm text-text-secondary mb-2">Common skills:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {commonSkills.slice(0, 15).map(skill => (
+                <div>
+                  <p className="text-sm font-semibold text-gray-300 mb-3">Suggestions:</p>
+                  <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto custom-scrollbar">
+                    {commonSkills.map(skill => (
                       <button
                         key={skill}
                         type="button"
                         onClick={() => handleSkillSelect(skill)}
                         disabled={selectedSkills.includes(skill)}
-                        className={`px-2 py-1 text-xs rounded transition-colors backdrop-blur-sm ${
+                        className={`px-3 py-1.5 text-xs rounded-lg transition-all font-medium ${
                           selectedSkills.includes(skill)
-                            ? 'bg-dark-surface/50 text-text-tertiary cursor-not-allowed border border-gray-600'
-                            : 'bg-dark-surface/50 text-text-secondary hover:bg-brand-primary/20 hover:text-brand-light border border-dark-border'
+                            ? 'bg-slate-800/30 text-gray-600 cursor-not-allowed border border-slate-700/30'
+                            : 'bg-slate-800/50 text-gray-300 hover:bg-brand-primary/20 hover:text-brand-light hover:border-brand-primary/40 border border-slate-600/50'
                         }`}
                       >
                         {skill}
@@ -794,68 +716,50 @@ const Profile = () => {
                     ))}
                   </div>
                 </div>
-
-                {/* Selected Skills */}
-                <div>
-                  <p className="text-sm text-text-secondary mb-2">Your skills:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSkills.map(skill => (
-                      <span
-                        key={skill}
-                        className="inline-flex items-center px-3 py-1 bg-brand-primary/20 text-brand-light rounded-full text-sm border border-brand-primary/30 backdrop-blur-sm"
-                      >
-                        {skill}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSkill(skill)}
-                          className="ml-2 text-brand-light hover:text-white transition-colors"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
               </div>
 
-              {/* Experience */}
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Experience Level
-                </label>
+              {/* Experience Level Card */}
+              <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-amber-500/20 rounded-lg">
+                    <Award className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Experience</h2>
+                </div>
                 <select
                   name="experience"
                   value={profile.experience || ''}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-dark-surface/50 border border-dark-border rounded-md text-white focus:ring-2 focus:ring-brand-primary focus:border-transparent backdrop-blur-sm"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
                 >
-                  <option value="" className="bg-dark-surface text-white">Select experience level</option>
-                  <option value="beginner" className="bg-dark-surface text-white">Beginner (0-1 years)</option>
-                  <option value="intermediate" className="bg-dark-surface text-white">Intermediate (1-3 years)</option>
-                  <option value="advanced" className="bg-dark-surface text-white">Advanced (3-5 years)</option>
-                  <option value="expert" className="bg-dark-surface text-white">Expert (5+ years)</option>
+                  <option value="" className="bg-slate-800">Select experience level</option>
+                  <option value="beginner" className="bg-slate-800">🌱 Beginner (0-1 years)</option>
+                  <option value="intermediate" className="bg-slate-800">🚀 Intermediate (1-3 years)</option>
+                  <option value="advanced" className="bg-slate-800">⭐ Advanced (3-5 years)</option>
+                  <option value="expert" className="bg-slate-800">💎 Expert (5+ years)</option>
                 </select>
               </div>
 
               {/* Save Button */}
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5 disabled:opacity-50 transition-all duration-200"
-                >
-                  {saving ? 'Saving...' : 'Save Profile'}
-                </button>
-              </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full px-6 py-4 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl font-bold hover:shadow-xl hover:shadow-brand-primary/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-lg"
+              >
+                {saving ? '💾 Saving...' : '✨ Save Profile'}
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* GitHub Integration Tab */}
         {activeTab === 'github' && (
-          <div className="bg-dark-card/80 rounded-lg shadow-sm p-6">
+          <motion.div 
+            variants={itemVariants}
+            className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-700/50 shadow-xl"
+          >
             {githubLoading ? (
               <div className="text-center py-12">
                 <Loading message="Loading GitHub profile..." />
@@ -863,130 +767,164 @@ const Profile = () => {
             ) : githubProfile ? (
               // Connected GitHub Profile
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-text-primary">GitHub Profile</h2>
-                  <button
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/20 rounded-lg">
+                      <Github className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white">GitHub Profile</h2>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={handleGitHubDisconnect}
-                    className="px-4 py-2 bg-red-600/80 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    className="px-5 py-2.5 bg-red-600/20 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-600/30 transition-all font-medium"
                   >
                     Disconnect
-                  </button>
+                  </motion.button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Profile Info */}
-                  <div className="flex items-start space-x-4">
-                    <img
-                      src={githubProfile.avatarUrl}
-                      alt={githubProfile.displayName}
-                      className="w-16 h-16 rounded-full"
-                    />
-                    <div>
-                      <h3 className="text-lg font-medium text-text-primary">{githubProfile.displayName}</h3>
-                      <p className="text-text-secondary">@{githubProfile.username}</p>
-                      {githubProfile.bio && (
-                        <p className="text-text-tertiary text-sm mt-2">{githubProfile.bio}</p>
+                <div className="bg-slate-800/40 rounded-xl p-6 mb-6">
+                  <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+                    {/* Profile Info */}
+                    <div className="flex items-start space-x-4">
+                      {githubProfile.avatarUrl ? (
+                        <img
+                          src={githubProfile.avatarUrl}
+                          alt={githubProfile.displayName || 'GitHub Profile'}
+                          className="w-20 h-20 rounded-full border-2 border-brand-primary shadow-lg"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full border-2 border-brand-primary bg-slate-700 flex items-center justify-center">
+                          <Github className="w-10 h-10 text-gray-400" />
+                        </div>
                       )}
+                      <div>
+                        <h3 className="text-xl font-bold text-white">{githubProfile.displayName || 'GitHub User'}</h3>
+                        <p className="text-gray-400 mb-2">@{githubProfile.username || 'username'}</p>
+                        {githubProfile.bio && (
+                          <p className="text-gray-300 text-sm">{githubProfile.bio}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-xl font-semibold text-brand-primary">{githubProfile.publicRepos}</div>
-                      <div className="text-xs text-text-secondary">Repositories</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-semibold text-brand-primary">{githubProfile.followers}</div>
-                      <div className="text-xs text-text-secondary">Followers</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-semibold text-brand-primary">{githubProfile.following}</div>
-                      <div className="text-xs text-text-secondary">Following</div>
-                    </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/30 rounded-xl p-4 text-center">
+                    <div className="text-3xl font-bold text-blue-400">{githubProfile.publicRepos ?? 0}</div>
+                    <div className="text-sm text-gray-400 mt-1">Repositories</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/30 rounded-xl p-4 text-center">
+                    <div className="text-3xl font-bold text-purple-400">{githubProfile.followers ?? 0}</div>
+                    <div className="text-sm text-gray-400 mt-1">Followers</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 border border-pink-500/30 rounded-xl p-4 text-center">
+                    <div className="text-3xl font-bold text-pink-400">{githubProfile.following ?? 0}</div>
+                    <div className="text-sm text-gray-400 mt-1">Following</div>
                   </div>
                 </div>
                 
                 {/* Additional Info */}
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  {githubProfile.location && (
-                    <div className="text-text-secondary">
-                      <span className="font-medium">Location:</span> {githubProfile.location}
-                    </div>
-                  )}
-                  {githubProfile.company && (
-                    <div className="text-text-secondary">
-                      <span className="font-medium">Company:</span> {githubProfile.company}
-                    </div>
-                  )}
-                  {githubProfile.website && (
-                    <div className="text-text-secondary">
-                      <span className="font-medium">Website:</span>
-                      <a href={githubProfile.website} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline ml-1">
-                        {githubProfile.website}
-                      </a>
-                    </div>
-                  )}
-                  {githubProfile.connectedAt && (
-                    <div className="text-text-secondary">
-                      <span className="font-medium">Connected:</span> {new Date(githubProfile.connectedAt).toLocaleDateString()}
-                    </div>
-                  )}
+                <div className="bg-slate-800/40 rounded-xl p-6 mb-6">
+                  <h3 className="text-lg font-bold text-white mb-4">Additional Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {githubProfile.location && (
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium">Location:</span> {githubProfile.location}
+                      </div>
+                    )}
+                    {githubProfile.company && (
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <Briefcase className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium">Company:</span> {githubProfile.company}
+                      </div>
+                    )}
+                    {githubProfile.website && (
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <Globe className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium">Website:</span>
+                        <a href={githubProfile.website} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">
+                          Link
+                        </a>
+                      </div>
+                    )}
+                    {githubProfile.connectedAt && (
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium">Connected:</span> {new Date(githubProfile.connectedAt).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
-                <div className="mt-6">
-                  <a
-                    href={githubProfile.profileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 bg-dark-surface/50 text-text-primary rounded-lg hover:bg-dark-surface transition-colors"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                      <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                    </svg>
-                    View on GitHub
-                  </a>
-                </div>
+                <motion.a
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  href={githubProfile.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg hover:shadow-purple-600/30 transition-all font-medium"
+                >
+                  <Github className="w-5 h-5" />
+                  View GitHub Profile
+                  <ExternalLink className="w-4 h-4" />
+                </motion.a>
               </div>
             ) : (
               // Not Connected
-              <div className="text-center py-12">
-                <svg className="w-16 h-16 text-text-tertiary mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-                <h3 className="text-lg font-medium text-text-primary mb-2">GitHub Integration</h3>
-                <p className="text-text-secondary mb-4">
-                  Connect your GitHub account to showcase your repositories and contributions.
+              <div className="text-center py-16">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", duration: 0.5 }}
+                  className="w-24 h-24 bg-slate-800/60 rounded-full flex items-center justify-center mx-auto mb-6"
+                >
+                  <Github className="w-12 h-12 text-gray-500" />
+                </motion.div>
+                <h3 className="text-2xl font-bold text-white mb-3">Connect Your GitHub</h3>
+                <p className="text-gray-400 mb-8 max-w-md mx-auto">
+                  Showcase your repositories, contributions, and developer activity by connecting your GitHub account.
                 </p>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleGitHubConnect}
                   disabled={isConnectingGitHub}
-                  className="px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-xl hover:shadow-purple-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                 >
+                  <Github className="w-5 h-5" />
                   {isConnectingGitHub ? 'Connecting...' : 'Connect GitHub Account'}
-                </button>
+                </motion.button>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="bg-dark-card/80 rounded-lg shadow-sm p-6">
-            <div className="text-center py-12">
-              <svg className="w-16 h-16 text-text-tertiary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <h3 className="text-lg font-medium text-text-primary mb-2">Settings Coming Soon</h3>
-              <p className="text-text-secondary">
+          <motion.div 
+            variants={itemVariants}
+            className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-700/50 shadow-xl"
+          >
+            <div className="text-center py-16">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="w-24 h-24 bg-slate-800/60 rounded-full flex items-center justify-center mx-auto mb-6"
+              >
+                <Briefcase className="w-12 h-12 text-gray-500" />
+              </motion.div>
+              <h3 className="text-2xl font-bold text-white mb-3">Settings Coming Soon</h3>
+              <p className="text-gray-400 max-w-md mx-auto">
                 Account settings, privacy preferences, and notification options will be available here.
               </p>
             </div>
-          </div>
+          </motion.div>
         )}
-        </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

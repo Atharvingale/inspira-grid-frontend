@@ -1,0 +1,42 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/middleware/auth';
+import { getFirestore, initAdmin } from '@/lib/firebase-admin';
+
+// GET /api/users/[userId]
+export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { userId: string } }) => {
+  try {
+    const { userId } = params;
+    
+    initAdmin();
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    const userData = userDoc.data();
+    
+    // Return public profile information only
+    const publicProfile = {
+      uid: userDoc.id,
+      displayName: userData?.displayName,
+      email: userData?.email,
+      photoURL: userData?.photoURL,
+      bio: userData?.bio,
+      location: userData?.location,
+      website: userData?.website,
+      skills: userData?.skills || [],
+      joinedAt: userData?.joinedAt,
+      profileComplete: userData?.profileComplete
+    };
+    
+    return NextResponse.json(publicProfile);
+  } catch (error: any) {
+    console.error('Error fetching user profile:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch user profile', message: error.message },
+      { status: 500 }
+    );
+  }
+});

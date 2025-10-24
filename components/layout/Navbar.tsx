@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { useSocket } from "@/lib/NotificationContext";
 import { useNotifications } from "@/lib/NotificationContext";
+import { useMessagingSafe } from "@/lib/contexts/MessagingContext";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -24,16 +25,22 @@ import {
   Sparkles,
   Search
 } from "lucide-react";
+import logoImage from "@/app/assets/logo.png";
+import { GlobalSearchModal } from "@/components/search/GlobalSearchModal";
 
 export default function Navbar() {
   const { currentUser, userProfile, logout } = useAuth();
   const socketData = useSocket();
   const { notifications: realNotifications, unreadCount, markAsRead } = useNotifications();
+  const messaging = useMessagingSafe();
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  
+  const unreadMessagesCount = messaging?.getUnreadCount() || 0;
 
   const handleLogout = async () => {
     try {
@@ -69,8 +76,15 @@ export default function Navbar() {
             whileHover={{ scale: 1.02 }}
           >
             <Link href="/dashboard" className="flex items-center text-text-primary hover:text-brand-light transition-colors group">
-              <div className="w-8 h-8 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center mr-3 group-hover:shadow-lg group-hover:shadow-brand-primary/25 transition-all">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 relative mr-3 group-hover:shadow-lg group-hover:shadow-brand-primary/25 transition-all rounded-full">
+                <Image
+                  src={logoImage}
+                  alt="Inspira Grid Logo"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-contain"
+                  priority
+                />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-text-primary to-text-secondary bg-clip-text text-transparent">
                 Inspira-Grid
@@ -106,6 +120,18 @@ export default function Navbar() {
                     }`} />
                     {link.label}
                     
+                    {/* Unread messages badge */}
+                    {link.href === '/dashboard/messages' && unreadMessagesCount > 0 && (
+                      <motion.span 
+                        className="ml-2 h-5 w-5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", bounce: 0.6 }}
+                      >
+                        {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                      </motion.span>
+                    )}
+                    
                     {/* Active indicator */}
                     {isActive && (
                       <motion.div
@@ -121,6 +147,7 @@ export default function Navbar() {
             
             {/* Quick search */}
             <motion.button
+              onClick={() => setShowSearchModal(true)}
               className="flex items-center px-3 py-2.5 rounded-xl text-text-tertiary hover:text-text-primary hover:bg-white/5 transition-all duration-200 ml-2"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -410,17 +437,29 @@ export default function Navbar() {
                   >
                     <Link
                       href={link.href}
-                      className={`flex items-center px-4 py-4 rounded-xl text-base font-medium transition-all duration-200 min-h-[44px] ${
+                      className={`flex items-center justify-between px-4 py-4 rounded-xl text-base font-medium transition-all duration-200 min-h-[44px] ${
                         isActive
                           ? 'bg-brand-primary/10 text-brand-light border-l-4 border-l-brand-primary'
                           : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                       }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <IconComponent className={`w-5 h-5 mr-3 ${
-                        isActive ? 'text-brand-light' : 'text-text-tertiary'
-                      }`} />
-                      {link.label}
+                      <div className="flex items-center">
+                        <IconComponent className={`w-5 h-5 mr-3 ${
+                          isActive ? 'text-brand-light' : 'text-text-tertiary'
+                        }`} />
+                        {link.label}
+                      </div>
+                      {link.href === '/dashboard/messages' && unreadMessagesCount > 0 && (
+                        <motion.span 
+                          className="h-6 w-6 bg-gradient-to-r from-brand-primary to-brand-secondary text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", bounce: 0.6 }}
+                        >
+                          {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                        </motion.span>
+                      )}
                     </Link>
                   </motion.div>
                 );
@@ -443,6 +482,12 @@ export default function Navbar() {
           }}
         />
       )}
+
+      {/* Global Search Modal */}
+      <GlobalSearchModal 
+        isOpen={showSearchModal} 
+        onClose={() => setShowSearchModal(false)} 
+      />
     </motion.nav>
   );
 }

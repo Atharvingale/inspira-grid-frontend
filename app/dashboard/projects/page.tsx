@@ -120,7 +120,7 @@ const Projects = () => {
           params.append('limit', '100');
           
           const queryString = params.toString();
-          const url = `/api/projects${queryString ? '?' + queryString : ''}`;
+          const url = `/projects${queryString ? '?' + queryString : ''}`;
           
           const response = await apiClient.get(url);
           let fetchedProjects = (response as any)?.projects || [];
@@ -131,7 +131,7 @@ const Projects = () => {
           setFilteredProjects(fetchedProjects);
         } else {
           // Load user's own projects
-          const response = await apiClient.get('/api/projects/user/my-projects');
+          const response = await apiClient.get('/projects/user/my-projects');
           let userProjects = (response as any)?.projects || [];
           
           // Apply filters

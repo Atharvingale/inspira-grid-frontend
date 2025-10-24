@@ -10,8 +10,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().min(1, "Firebase messaging sender ID is required"),
   NEXT_PUBLIC_FIREBASE_APP_ID: z.string().min(1, "Firebase app ID is required"),
   
-  // API Configuration
-  NEXT_PUBLIC_API_URL: z.string().url("Valid API URL is required"),
+  // API Configuration (optional - defaults to relative /api for Next.js API routes)
+  NEXT_PUBLIC_API_URL: z.string().optional().default(""),
   
   // Environment Settings
   NEXT_PUBLIC_USE_EMULATOR: z.string().transform((val) => val === "true"),

@@ -1,6 +1,7 @@
 import { auth } from './firebase';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// Updated to use Next.js API routes instead of Express backend
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 /**
  * Generic API function for making requests to the Express server
@@ -21,14 +22,10 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
     try {
       const idToken = await user.getIdToken(true); // Force refresh to ensure valid token
       headers['Authorization'] = `Bearer ${idToken}`;
-      console.log('Added auth token to request for:', path);
     } catch (error) {
       console.error('Failed to get Firebase ID token:', error);
       throw new Error('Authentication failed. Please try logging in again.');
     }
-  } else {
-    // If no user is logged in and this is an authenticated endpoint, throw an error
-    console.warn('No authenticated user found for API request:', path);
   }
 
   const requestInit: RequestInit = {
@@ -45,7 +42,13 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
     
     return response;
   } catch (error) {
-    console.error('API request error:', error);
+    // Suppress logging for expected 404 on GitHub profile endpoint (user hasn't connected GitHub yet)
+    const isExpectedGitHubError = path === '/github/profile' && (error as Error).message?.includes('404');
+    
+    if (!isExpectedGitHubError) {
+      console.error('API request error:', error);
+    }
+    
     throw error;
   }
 }

@@ -42,21 +42,34 @@ export interface GitHubRepository {
  */
 class GitHubService extends BaseService {
   constructor() {
-    super('/api/github');
+    super(''); // BaseURL already includes /api from API_BASE_URL
   }
 
   /**
    * Get GitHub OAuth URL for connecting account
    */
   async getOAuthUrl(): Promise<ApiResponse<{ oauthUrl: string; message: string }>> {
-    return this.get('/oauth-url');
+    return this.get('/github/oauth-url');
   }
 
   /**
    * Get user's GitHub profile
    */
   async getProfile(): Promise<ApiResponse<GitHubProfile>> {
-    return this.get('/profile');
+    try {
+      return await this.get('/github/profile');
+    } catch (error: any) {
+      // Suppress console errors for expected 404 when GitHub is not connected
+      // This is normal behavior and shouldn't pollute the console
+      if (error?.message?.includes('404')) {
+        return {
+          success: false,
+          data: null as any,
+          error: 'GitHub account not connected'
+        };
+      }
+      throw error;
+    }
   }
 
   /**
@@ -73,7 +86,7 @@ class GitHubService extends BaseService {
     if (options?.type) params.append('type', options.type);
 
     const query = params.toString() ? `?${params.toString()}` : '';
-    return this.get(`/repositories${query}`);
+    return this.get(`/github/repositories${query}`);
   }
 
   /**
@@ -88,14 +101,14 @@ class GitHubService extends BaseService {
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.sort) params.append('sort', options.sort);
 
-    return this.get(`/repositories/search?${params.toString()}`);
+    return this.get(`/github/repositories/search?${params.toString()}`);
   }
 
   /**
    * Get specific repository details
    */
   async getRepository(owner: string, repo: string): Promise<ApiResponse<GitHubRepository>> {
-    return this.get(`/repositories/${owner}/${repo}`);
+    return this.get(`/github/repositories/${owner}/${repo}`);
   }
 
   /**
@@ -110,7 +123,7 @@ class GitHubService extends BaseService {
     if (options?.page) params.append('page', options.page.toString());
 
     const query = params.toString() ? `?${params.toString()}` : '';
-    return this.get(`/repositories/${owner}/${repo}/commits${query}`);
+    return this.get(`/github/repositories/${owner}/${repo}/commits${query}`);
   }
 
   /**
@@ -127,7 +140,7 @@ class GitHubService extends BaseService {
     if (options?.page) params.append('page', options.page.toString());
 
     const query = params.toString() ? `?${params.toString()}` : '';
-    return this.get(`/repositories/${owner}/${repo}/issues${query}`);
+    return this.get(`/github/repositories/${owner}/${repo}/issues${query}`);
   }
 
   /**
@@ -139,21 +152,21 @@ class GitHubService extends BaseService {
     repositoryName: string;
     description?: string;
   }): Promise<ApiResponse<{ message: string; project: any }>> {
-    return this.post('/link-repository', data);
+    return this.post('/github/link-repository', data);
   }
 
   /**
    * Unlink repository from project
    */
   async unlinkRepositoryFromProject(projectId: string): Promise<ApiResponse<{ message: string; project: any }>> {
-    return this.delete(`/unlink-repository/${projectId}`);
+    return this.delete(`/github/unlink-repository/${projectId}`);
   }
 
   /**
    * Disconnect GitHub account
    */
   async disconnect(): Promise<ApiResponse<{ message: string }>> {
-    return this.post('/disconnect');
+    return this.post('/github/disconnect');
   }
 
   /**
@@ -162,11 +175,19 @@ class GitHubService extends BaseService {
   async redirectToGitHubOAuth(): Promise<void> {
     try {
       const response = await this.getOAuthUrl();
-      if (response.success && response.data?.oauthUrl) {
+      
+      // Handle double-wrapped response from baseService
+      // Backend returns: { success, data: { oauthUrl } }
+      // BaseService wraps it again: { success, data: { success, data: { oauthUrl } } }
+      const actualData = (response.data as any)?.data || response.data;
+      const oauthUrl = actualData?.oauthUrl;
+      
+      if (response.success && oauthUrl) {
         // Redirect to GitHub OAuth URL
-        window.location.href = response.data.oauthUrl;
+        window.location.href = oauthUrl;
       } else {
-        throw new Error('Failed to get GitHub OAuth URL');
+        console.error('OAuth URL request failed:', response);
+        throw new Error(response.error || 'Failed to get GitHub OAuth URL');
       }
     } catch (error) {
       console.error('GitHub OAuth redirect error:', error);

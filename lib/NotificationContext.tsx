@@ -3,6 +3,9 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { notificationService } from './services/notificationService';
+import { getPusherClient } from './pusher';
+import type PusherClient from 'pusher-js';
+import type { Channel } from 'pusher-js';
 
 // Enhanced notification interface matching our backend
 interface NotificationData {
@@ -73,7 +76,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [eventSource, setEventSource] = useState<EventSource | null>(null);
+  const [pusherClient, setPusherClient] = useState<PusherClient | null>(null);
+  const [userChannel, setUserChannel] = useState<Channel | null>(null);
   
   const { currentUser } = useAuth();
 
@@ -189,59 +193,90 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     }
   }, [currentUser, notifications]);
 
-  // Setup real-time updates via SSE
+  // Setup real-time updates via Pusher
   const setupRealTimeUpdates = useCallback(async () => {
-    if (!currentUser || eventSource) return;
+    if (!currentUser || pusherClient) return;
     
     try {
-      const source = await notificationService.getNotificationStream();
-      setEventSource(source);
+      const client = getPusherClient();
+      if (!client) {
+        console.warn('Pusher client not available');
+        return;
+      }
       
-      source.onopen = () => {
-        console.log('📡 Notification stream connected');
-      };
+      setPusherClient(client);
       
-      source.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'connected') {
-            console.log('✅ Connected to notification stream');
-          } else if (data.type === 'notifications_update') {
-            // Update notifications with real-time data
-            setNotifications(data.data || []);
-            setUnreadCount(data.count || 0);
-          } else if (data.type === 'error') {
-            console.error('Notification stream error:', data.message);
-          }
-        } catch (err) {
-          console.error('Error parsing notification stream data:', err);
+      // Subscribe to user's private channel for notifications
+      const channel = client.subscribe(`private-user-${currentUser.uid}`);
+      setUserChannel(channel);
+      
+      // Handle connection state
+      client.connection.bind('connected', () => {
+      });
+      
+      client.connection.bind('error', (err: any) => {
+        console.error('Pusher connection error:', err);
+      });
+      
+      // Listen for new notifications
+      channel.bind('new-notification', (data: NotificationData) => {
+        console.log('📬 New notification received:', data);
+        setNotifications(prev => [data, ...prev]);
+        if (!data.isRead) {
+          setUnreadCount(prev => prev + 1);
         }
-      };
+      });
       
-      source.onerror = (error) => {
-        console.error('Notification stream error:', error);
-        // Reconnect after a delay
-        setTimeout(() => {
-          if (source.readyState === EventSource.CLOSED) {
-            console.log('🔄 Attempting to reconnect notification stream...');
-            setupRealTimeUpdates();
-          }
-        }, 5000);
-      };
+      // Listen for notification updates (mark as read, etc.)
+      channel.bind('notification-updated', (data: { id: string; isRead: boolean }) => {
+        console.log('🔄 Notification updated:', data);
+        setNotifications(prev =>
+          prev.map(notif =>
+            notif.id === data.id ? { ...notif, isRead: data.isRead } : notif
+          )
+        );
+        if (data.isRead) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      });
+      
+      // Listen for notification deletion
+      channel.bind('notification-deleted', (data: { id: string }) => {
+        console.log('🗑️ Notification deleted:', data);
+        const deletedNotif = notifications.find(n => n.id === data.id);
+        setNotifications(prev => prev.filter(notif => notif.id !== data.id));
+        if (deletedNotif && !deletedNotif.isRead) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      });
+      
+      // Listen for bulk updates (mark all as read)
+      channel.bind('notifications-bulk-update', (data: { action: string }) => {
+        console.log('📝 Bulk notification update:', data);
+        if (data.action === 'mark-all-read') {
+          setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
+          setUnreadCount(0);
+        }
+      });
+      
     } catch (err) {
-      console.error('Error setting up real-time updates:', err);
+      console.error('Error setting up Pusher real-time updates:', err);
     }
-  }, [currentUser, eventSource]);
+  }, [currentUser, pusherClient, notifications]);
 
   // Cleanup real-time updates
   const cleanupRealTimeUpdates = useCallback(() => {
-    if (eventSource) {
-      eventSource.close();
-      setEventSource(null);
-      console.log('📡 Notification stream disconnected');
+    if (userChannel) {
+      userChannel.unbind_all();
+      userChannel.unsubscribe();
+      setUserChannel(null);
     }
-  }, [eventSource]);
+    if (pusherClient) {
+      pusherClient.disconnect();
+      setPusherClient(null);
+      console.log('📡 Pusher disconnected');
+    }
+  }, [userChannel, pusherClient]);
 
   // Get notifications by type
   const getNotificationsByType = useCallback((type: string) => {
@@ -270,14 +305,16 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     return () => {
       cleanupRealTimeUpdates();
     };
-  }, [currentUser, fetchNotifications, fetchUnreadCount, setupRealTimeUpdates, cleanupRealTimeUpdates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       cleanupRealTimeUpdates();
     };
-  }, [cleanupRealTimeUpdates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const value: NotificationContextType = {
     notifications,
