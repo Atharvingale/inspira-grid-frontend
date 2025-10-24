@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/lib/AuthContext';
+import { apiClient } from '@/lib/api';
 import { githubService, type GitHubProfile } from '@/lib/services/githubService';
 import Loading from '@/components/common/Loading';
 import { motion } from 'framer-motion';
@@ -72,43 +73,42 @@ const Profile = () => {
   ];
 
   useEffect(() => {
-    if (userProfile) {
-      setProfile(userProfile as UserProfile);
-      setSelectedSkills(userProfile.skills || []);
-    } else if (currentUser) {
-      // Try to load from localStorage as fallback
-      try {
-        const savedProfile = localStorage.getItem(`profile_${currentUser.uid}`);
-        if (savedProfile) {
-          const parsedProfile = JSON.parse(savedProfile);
-          setProfile(parsedProfile);
-          setSelectedSkills(parsedProfile.skills || []);
-        } else {
-          // Create initial profile from currentUser data
-          const initialProfile: UserProfile = {
-            id: currentUser.uid,
-            email: currentUser.email || '',
-            displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-            profileComplete: false,
-            skills: [],
-            availability: 'available'
-          };
-          setProfile(initialProfile);
+    const loadUserProfile = async () => {
+      if (currentUser) {
+        try {
+          const userData = await apiClient.get('/api/users/profile');
+          setProfile(userData);
+          setSelectedSkills(userData.skills || []);
+        } catch (error) {
+          console.error('Error loading profile:', error);
+          // Fallback to localStorage if API fails
+          try {
+            const savedProfile = localStorage.getItem(`profile_${currentUser.uid}`);
+            if (savedProfile) {
+              const parsedProfile = JSON.parse(savedProfile);
+              setProfile(parsedProfile);
+              setSelectedSkills(parsedProfile.skills || []);
+            }
+          } catch (localError) {
+            // Create initial profile if all else fails
+            const initialProfile: UserProfile = {
+              id: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+              profileComplete: false,
+              skills: [],
+              availability: 'available'
+            };
+            setProfile(initialProfile);
+          }
         }
-      } catch (error) {
-        // Failed to load profile from localStorage - create initial profile
-        const initialProfile: UserProfile = {
-          id: currentUser.uid,
-          email: currentUser.email || '',
-          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-          profileComplete: false,
-          skills: [],
-          availability: 'available'
-        };
-        setProfile(initialProfile);
       }
+    };
+    
+    if (currentUser) {
+      loadUserProfile();
     }
-  }, [userProfile, currentUser]);
+  }, [currentUser]);
 
   // Check for OAuth callback status
   useEffect(() => {
@@ -276,14 +276,24 @@ const Profile = () => {
     try {
       setSaving(true);
       
-      // Simulate async operation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Use API endpoint to save profile
+      const result = await apiClient.post('/api/users/profile', {
+        displayName: profile.displayName,
+        bio: profile.bio,
+        location: profile.location,
+        website: profile.website,
+        github: profile.github,
+        linkedin: profile.linkedin,
+        skills: selectedSkills,
+        experience: profile.experience,
+        availability: profile.availability
+      });
+      
+      // Update local state
+      setProfile(result.profile);
       
       // Save to localStorage for persistence
-      localStorage.setItem(`profile_${currentUser.uid}`, JSON.stringify(profile));
-      
-      // Update the auth context
-      await updateUserProfile?.(currentUser.uid, profile);
+      localStorage.setItem(`profile_${currentUser.uid}`, JSON.stringify(result.profile));
       
       toast.success('Profile updated successfully!');
     } catch (error: any) {
@@ -301,12 +311,12 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-lighter">
       <div className="max-w-6xl mx-auto">
-        {/* Banner Section with Upload */}
+        {/* Enhanced Banner Section with Upload */}
         <motion.div 
-          className="relative h-64 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-b-3xl overflow-hidden"
+          className="relative h-72 bg-gradient-to-r from-brand-primary via-purple-600 to-brand-secondary rounded-b-3xl overflow-hidden shadow-2xl"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6 }}
         >
           {bannerPreview && (
             <img 
@@ -315,17 +325,24 @@ const Profile = () => {
               className="w-full h-full object-cover"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-dark-darker/50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-dark-darker/80" />
+          
+          {/* Floating Particles Animation */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-20 left-10 w-3 h-3 bg-white/20 rounded-full animate-ping" />
+            <div className="absolute top-32 right-20 w-2 h-2 bg-white/30 rounded-full animate-pulse" />
+            <div className="absolute bottom-20 left-20 w-4 h-4 bg-white/10 rounded-full animate-bounce" />
+          </div>
           
           {/* Banner Upload Button */}
-          <label className="absolute top-4 right-4 cursor-pointer">
+          <label className="absolute top-6 right-6 cursor-pointer group">
             <motion.div 
-              className="flex items-center space-x-2 px-4 py-2 backdrop-blur-xl bg-white/20 border border-white/30 rounded-full text-white hover:bg-white/30 transition-all shadow-lg"
-              whileHover={{ scale: 1.05 }}
+              className="flex items-center space-x-3 px-5 py-3 backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl text-white hover:bg-white/30 transition-all shadow-xl group-hover:shadow-2xl"
+              whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Camera className="w-4 h-4" />
-              <span className="text-sm font-medium">Change Banner</span>
+              <Camera className="w-5 h-5" />
+              <span className="text-sm font-semibold">Change Cover</span>
             </motion.div>
             <input 
               type="file" 
@@ -335,14 +352,17 @@ const Profile = () => {
             />
           </label>
 
-          {/* Avatar Section */}
-          <div className="absolute -bottom-20 left-8">
-            <div className="relative">
+          {/* Enhanced Avatar Section */}
+          <div className="absolute -bottom-24 left-8">
+            <div className="relative group">
+              {/* Avatar Ring Animation */}
+              <div className="absolute inset-0 w-48 h-48 rounded-full border-4 border-gradient-to-r from-brand-primary to-brand-secondary opacity-30 animate-pulse" />
+              
               {/* Avatar Image */}
               <motion.div 
-                className="w-40 h-40 rounded-3xl border-4 border-dark-darker bg-gradient-to-br from-brand-primary to-brand-secondary overflow-hidden shadow-2xl"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
+                className="relative w-48 h-48 rounded-full border-6 border-white bg-gradient-to-br from-brand-primary to-brand-secondary overflow-hidden shadow-2xl"
+                whileHover={{ scale: 1.03 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
                 {avatarPreview || currentUser?.photoURL ? (
                   <img 
@@ -352,19 +372,32 @@ const Profile = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-20 h-20 text-white" />
+                    <User className="w-24 h-24 text-white" />
                   </div>
                 )}
+                
+                {/* Profile completion indicator */}
+                <div className="absolute bottom-2 right-2">
+                  <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
+                    profile.profileComplete ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`}>
+                    {profile.profileComplete ? (
+                      <Check className="w-3 h-3 text-white" />
+                    ) : (
+                      <span className="w-2 h-2 bg-white rounded-full" />
+                    )}
+                  </div>
+                </div>
               </motion.div>
               
               {/* Avatar Upload Button */}
-              <label className="absolute bottom-2 right-2 cursor-pointer">
+              <label className="absolute bottom-6 right-4 cursor-pointer">
                 <motion.div 
-                  className="p-3 backdrop-blur-xl bg-white/90 rounded-full shadow-lg hover:bg-white transition-all"
-                  whileHover={{ scale: 1.1 }}
+                  className="p-4 backdrop-blur-xl bg-brand-primary/90 rounded-full shadow-xl hover:bg-brand-primary transition-all group-hover:scale-110"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <Camera className="w-5 h-5 text-brand-primary" />
+                  <Camera className="w-6 h-6 text-white" />
                 </motion.div>
                 <input 
                   type="file" 
@@ -377,62 +410,180 @@ const Profile = () => {
           </div>
         </motion.div>
 
-        {/* Profile Info Bar */}
-        <div className="px-8 pt-24 pb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div className="mb-4 lg:mb-0">
-              <motion.h1 
-                className="text-4xl font-bold text-white mb-2"
+        {/* Enhanced Profile Info Bar */}
+        <div className="px-8 pt-32 pb-8">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
+            <div className="flex-1">
+              <motion.div 
+                className="mb-6"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                {profile.displayName || 'Your Name'}
-              </motion.h1>
-              <motion.div 
-                className="flex items-center space-x-4 text-text-tertiary"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="flex items-center space-x-2">
-                  <Mail className="w-4 h-4" />
-                  <span className="text-sm">{profile.email}</span>
-                </div>
-                {profile.location && (
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">{profile.location}</span>
-                  </div>
-                )}
-                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
-                  profile.availability === 'available' ? 'bg-emerald-500/20 text-emerald-400' :
-                  profile.availability === 'busy' ? 'bg-amber-500/20 text-amber-400' :
-                  'bg-red-500/20 text-red-400'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${
-                    profile.availability === 'available' ? 'bg-emerald-400' :
-                    profile.availability === 'busy' ? 'bg-amber-400' :
-                    'bg-red-400'
-                  } animate-pulse`} />
-                  <span className="text-xs font-medium capitalize">{profile.availability || 'available'}</span>
+                <h1 className="text-5xl font-bold text-white mb-3 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  {profile.displayName || 'Your Name'}
+                </h1>
+                <div className="flex items-center gap-2 mb-4">
+                  {!profile.profileComplete && (
+                    <motion.div 
+                      className="flex items-center gap-2 px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-300"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      <Zap className="w-3 h-3" />
+                      <span className="text-xs font-medium">Complete your profile</span>
+                    </motion.div>
+                  )}
+                  {profile.profileComplete && (
+                    <motion.div 
+                      className="flex items-center gap-2 px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-300"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      <Check className="w-3 h-3" />
+                      <span className="text-xs font-medium">Profile Complete</span>
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
+              
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="flex items-center space-x-3 px-4 py-3 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
+                  <div className="p-2 bg-brand-primary/20 rounded-lg">
+                    <Mail className="w-4 h-4 text-brand-light" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-tertiary">Email</p>
+                    <p className="text-sm text-text-secondary font-medium">{profile.email}</p>
+                  </div>
+                </div>
+                
+                {profile.location && (
+                  <div className="flex items-center space-x-3 px-4 py-3 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
+                    <div className="p-2 bg-accent-blue/20 rounded-lg">
+                      <MapPin className="w-4 h-4 text-accent-blue" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-tertiary">Location</p>
+                      <p className="text-sm text-text-secondary font-medium">{profile.location}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center space-x-3 px-4 py-3 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
+                  <div className={`p-2 rounded-lg ${
+                    profile.availability === 'available' ? 'bg-emerald-500/20' :
+                    profile.availability === 'busy' ? 'bg-amber-500/20' :
+                    'bg-red-500/20'
+                  }`}>
+                    <div className={`w-4 h-4 rounded-full ${
+                      profile.availability === 'available' ? 'bg-emerald-400' :
+                      profile.availability === 'busy' ? 'bg-amber-400' :
+                      'bg-red-400'
+                    } animate-pulse`} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-tertiary">Status</p>
+                    <p className={`text-sm font-medium capitalize ${
+                      profile.availability === 'available' ? 'text-emerald-400' :
+                      profile.availability === 'busy' ? 'text-amber-400' :
+                      'text-red-400'
+                    }`}>{profile.availability || 'available'}</p>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {profile.bio && (
+                <motion.div 
+                  className="mb-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <div className="px-6 py-4 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
+                    <h3 className="text-sm font-semibold text-text-primary mb-2 flex items-center">
+                      <User className="w-4 h-4 mr-2" />
+                      About Me
+                    </h3>
+                    <p className="text-text-secondary text-sm leading-relaxed">{profile.bio}</p>
+                  </div>
+                </motion.div>
+              )}
+              
+              {selectedSkills.length > 0 && (
+                <motion.div 
+                  className="mb-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <div className="px-6 py-4 bg-dark-card/50 rounded-xl border border-dark-border/50 backdrop-blur-sm">
+                    <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center">
+                      <Star className="w-4 h-4 mr-2" />
+                      Skills ({selectedSkills.length})
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSkills.slice(0, 8).map(skill => (
+                        <span key={skill} className="px-3 py-1 bg-brand-primary/20 text-brand-light rounded-lg text-xs font-medium border border-brand-primary/30">
+                          {skill}
+                        </span>
+                      ))}
+                      {selectedSkills.length > 8 && (
+                        <span className="px-3 py-1 bg-dark-surface/50 text-text-tertiary rounded-lg text-xs font-medium">
+                          +{selectedSkills.length - 8} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
             
-            <motion.button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl hover:shadow-lg hover:shadow-brand-primary/30 disabled:opacity-50 transition-all"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <motion.div
+              className="flex flex-col gap-3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Save className="w-5 h-5" />
-              <span className="font-semibold">{saving ? 'Saving...' : 'Save Changes'}</span>
-            </motion.button>
+              <motion.button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-2xl hover:shadow-xl hover:shadow-brand-primary/30 disabled:opacity-50 transition-all font-semibold"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Save className="w-5 h-5" />
+                <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+              </motion.button>
+              
+              {/* Quick Actions */}
+              <div className="flex flex-col gap-2">
+                <motion.button
+                  onClick={() => setActiveTab('github')}
+                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-dark-card/50 border border-dark-border/50 text-text-secondary rounded-xl hover:bg-dark-surface/50 hover:text-text-primary transition-all"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <GithubIcon className="w-4 h-4" />
+                  <span className="text-sm font-medium">GitHub</span>
+                </motion.button>
+                
+                <motion.button
+                  onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-dark-card/50 border border-dark-border/50 text-text-secondary rounded-xl hover:bg-dark-surface/50 hover:text-text-primary transition-all"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <Award className="w-4 h-4" />
+                  <span className="text-sm font-medium">Skills</span>
+                </motion.button>
+              </div>
+            </motion.div>
           </div>
         </div>
 

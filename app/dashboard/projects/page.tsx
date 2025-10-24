@@ -92,8 +92,7 @@ const Projects = () => {
     { value: '', label: 'All Status' },
     { value: 'open', label: 'Open' },
     { value: 'in-progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'approved', label: 'Approved' }
+    { value: 'completed', label: 'Completed' }
   ];
 
   const sortOptions = [
@@ -118,7 +117,6 @@ const Projects = () => {
           if (searchTerm) params.append('search', searchTerm);
           if (selectedCategory) params.append('category', selectedCategory);
           if (selectedStatus) params.append('status', selectedStatus);
-          else params.append('status', 'approved'); // Default to approved
           params.append('limit', '100');
           
           const queryString = params.toString();
@@ -258,7 +256,6 @@ const Projects = () => {
       if (searchTerm) params.append('search', searchTerm);
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedStatus) params.append('status', selectedStatus);
-      else params.append('status', 'approved');
       params.append('limit', '100');
       const response = await apiClient.get(`/api/projects?${params.toString()}`);
       setFilteredProjects((response as any)?.projects || []);
@@ -711,8 +708,7 @@ const ProjectCard = ({
     const statusConfig = {
       'open': { bg: 'bg-success-500/20', text: 'text-success-500', label: 'Open' },
       'in-progress': { bg: 'bg-brand-primary/20', text: 'text-brand-primary', label: 'In Progress' },
-      'completed': { bg: 'bg-text-tertiary/20', text: 'text-text-tertiary', label: 'Completed' },
-      'approved': { bg: 'bg-accent-purple/20', text: 'text-accent-purple', label: 'Approved' }
+      'completed': { bg: 'bg-text-tertiary/20', text: 'text-text-tertiary', label: 'Completed' }
     };
     const config = statusConfig[project.status] || statusConfig.open;
     return (

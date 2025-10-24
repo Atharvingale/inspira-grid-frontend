@@ -19,13 +19,16 @@ class NotificationService extends BaseService {
    */
   async getNotifications(
     isRead?: boolean,
-    pagination: PaginationParams = { page: 1, limit: 20 }
-  ): Promise<ApiResponse<PaginatedResponse<Notification>>> {
-    const endpoint = this.buildEndpoint('/notifications', {
-      isRead,
-      ...pagination,
-    });
-    return this.get<PaginatedResponse<Notification>>(endpoint);
+    type?: string,
+    limit: number = 20
+  ): Promise<ApiResponse<{ data: Notification[]; count: number }>> {
+    const params = new URLSearchParams();
+    if (isRead !== undefined) params.append('isRead', isRead.toString());
+    if (type) params.append('type', type);
+    if (limit) params.append('limit', limit.toString());
+    
+    const endpoint = `/notifications${params.toString() ? '?' + params.toString() : ''}`;
+    return this.get<{ data: Notification[]; count: number }>(endpoint);
   }
 
   /**
@@ -46,7 +49,7 @@ class NotificationService extends BaseService {
    * Mark all notifications as read
    */
   async markAllAsRead(): Promise<ApiResponse<{ updatedCount: number }>> {
-    return this.patch<{ updatedCount: number }>('/notifications/mark-all-read');
+    return this.patch<{ updatedCount: number }>('/notifications/read-all');
   }
 
   /**
@@ -84,8 +87,8 @@ class NotificationService extends BaseService {
   /**
    * Get unread notification count
    */
-  async getUnreadCount(): Promise<ApiResponse<{ count: number }>> {
-    return this.get<{ count: number }>('/notifications/unread-count');
+  async getUnreadCount(): Promise<ApiResponse<{ data: { count: number } }>> {
+    return this.get<{ data: { count: number } }>('/notifications/count/unread');
   }
 
   /**
@@ -284,10 +287,18 @@ class NotificationService extends BaseService {
   /**
    * Get real-time notification feed (Server-Sent Events)
    */
-  getNotificationStream(): EventSource {
-    const token = localStorage.getItem('authToken'); // Adjust based on your auth implementation
-    const url = `/api/notifications/stream${token ? `?token=${token}` : ''}`;
-    return new EventSource(url);
+  async getNotificationStream(): Promise<EventSource> {
+    // Get auth headers for SSE connection
+    const headers = await import('@/lib/api').then(m => m.authHeaders());
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const url = `${baseUrl}/api/notifications/stream/realtime`;
+    
+    // For SSE with auth, we need to pass the token as a query parameter
+    // since EventSource doesn't support custom headers
+    const authToken = headers.Authorization?.replace('Bearer ', '');
+    const urlWithAuth = authToken ? `${url}?token=${authToken}` : url;
+    
+    return new EventSource(urlWithAuth);
   }
 
   /**

@@ -100,6 +100,14 @@ export const apiClient = {
     return response.json();
   },
 
+  async patch<T = unknown>(path: string, data?: unknown): Promise<T> {
+    const response = await api(path, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return response.json();
+  },
+
   async delete<T = unknown>(path: string): Promise<T> {
     const response = await api(path, { method: 'DELETE' });
     return response.json();

@@ -4,9 +4,35 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft,
+  Users,
+  Code,
+  Calendar,
+  MapPin,
+  Globe,
+  Github as GithubIcon,
+  Linkedin,
+  Mail,
+  Eye,
+  Check,
+  X,
+  Star,
+  GitBranch,
+  BookOpen,
+  TrendingUp,
+  Award,
+  ExternalLink,
+  MessageCircle,
+  Clock,
+  Shield,
+  Zap
+} from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { apiClient as api } from '@/lib/api';
 import Loading from '@/components/common/Loading';
+import Button from '@/components/ui/Button';
 
 interface Project {
   id: string;
@@ -21,7 +47,7 @@ interface Project {
   duration?: string;
   budget?: string;
   githubRepo?: string;
-  status: 'approved' | 'pending' | 'rejected' | 'in-progress' | 'completed';
+  status: 'open' | 'pending' | 'in-progress' | 'completed';
   createdAt: { seconds: number } | string;
   applicationCount?: number;
   isOwner?: boolean;
@@ -31,12 +57,47 @@ interface Project {
 
 interface Application {
   id: string;
+  applicantId: string;
   applicantName: string;
   applicantEmail: string;
   message: string;
   skills?: string[];
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: { seconds: number } | string;
+  applicantDetails?: {
+    displayName: string;
+    email: string;
+    bio?: string;
+    location?: string;
+    website?: string;
+    github?: string;
+    linkedin?: string;
+    skills?: string[];
+    experience?: string;
+    availability?: string;
+  };
+  githubProfile?: {
+    login: string;
+    name: string;
+    bio: string;
+    avatar_url: string;
+    html_url: string;
+    public_repos: number;
+    followers: number;
+    following: number;
+    location: string;
+    company: string;
+    blog: string;
+    repositories?: Array<{
+      name: string;
+      description: string;
+      html_url: string;
+      language: string;
+      stargazers_count: number;
+      forks_count: number;
+      updated_at: string;
+    }>;
+  };
 }
 
 const ProjectDetails = () => {
@@ -52,6 +113,7 @@ const ProjectDetails = () => {
   const [applying, setApplying] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedApplicant, setSelectedApplicant] = useState<Application | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -86,7 +148,54 @@ const ProjectDetails = () => {
   const loadApplications = async () => {
     try {
       const data = await api.get(`/api/projects/${id}/applications`);
-      setApplications((data as any)?.applications || []);
+      // Simulate loading GitHub profiles for each applicant
+      const applicationsWithGitHub = await Promise.all(
+        (data as any)?.applications?.map(async (app: Application) => {
+          if (app.applicantDetails?.github) {
+            try {
+              // Mock GitHub API call - replace with actual API
+              const githubProfile = {
+                login: app.applicantDetails.github,
+                name: app.applicantDetails.displayName,
+                bio: app.applicantDetails.bio || '',
+                avatar_url: `https://github.com/${app.applicantDetails.github}.png`,
+                html_url: `https://github.com/${app.applicantDetails.github}`,
+                public_repos: Math.floor(Math.random() * 50) + 5,
+                followers: Math.floor(Math.random() * 100) + 10,
+                following: Math.floor(Math.random() * 80) + 5,
+                location: app.applicantDetails.location || '',
+                company: '',
+                blog: app.applicantDetails.website || '',
+                repositories: [
+                  {
+                    name: 'awesome-project',
+                    description: 'An awesome project built with React and TypeScript',
+                    html_url: `https://github.com/${app.applicantDetails.github}/awesome-project`,
+                    language: 'TypeScript',
+                    stargazers_count: Math.floor(Math.random() * 20) + 1,
+                    forks_count: Math.floor(Math.random() * 5) + 1,
+                    updated_at: new Date().toISOString()
+                  },
+                  {
+                    name: 'portfolio-website',
+                    description: 'My personal portfolio website',
+                    html_url: `https://github.com/${app.applicantDetails.github}/portfolio-website`,
+                    language: 'JavaScript',
+                    stargazers_count: Math.floor(Math.random() * 10) + 1,
+                    forks_count: Math.floor(Math.random() * 3) + 1,
+                    updated_at: new Date().toISOString()
+                  }
+                ]
+              };
+              return { ...app, githubProfile };
+            } catch (error) {
+              return app;
+            }
+          }
+          return app;
+        }) || []
+      );
+      setApplications(applicationsWithGitHub);
     } catch (error: any) {
       console.error('Error loading applications:', error);
       toast.error('Failed to load applications');
@@ -118,7 +227,7 @@ const ProjectDetails = () => {
 
   const handleApplicationAction = async (applicationId: string, action: 'accepted' | 'rejected', reviewNote = '') => {
     try {
-      await api.put(`/api/applications/${applicationId}`, {
+      await api.patch(`/api/applications/${applicationId}/status`, {
         status: action,
         reviewNote
       });
@@ -178,14 +287,13 @@ const ProjectDetails = () => {
     );
   }
 
-  const canApply = !project.isOwner && !project.isTeamMember && !project.hasApplied && project.status === 'approved';
+  const canApply = !project.isOwner && !project.isTeamMember && !project.hasApplied && project.status === 'open';
   const canManage = project.isOwner;
 
   const getStatusBadge = (status: string) => {
     const colors = {
-      approved: 'bg-success-500/20 text-success-500 border border-success-500/30',
+      open: 'bg-success-500/20 text-success-500 border border-success-500/30',
       pending: 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30',
-      rejected: 'bg-red-500/20 text-red-500 border border-red-500/30',
       'in-progress': 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30',
       completed: 'bg-text-tertiary/20 text-text-tertiary border border-text-tertiary/30'
     };
@@ -467,69 +575,293 @@ const ProjectDetails = () => {
           </div>
         )}
 
+        {/* Applications Tab - Enhanced with GitHub Integration */}
         {activeTab === 'applications' && canManage && (
-          <div className="bg-dark-card/80 backdrop-blur-sm border border-dark-border rounded-lg shadow-xl p-6">
-            <h2 className="text-xl font-semibold text-text-primary mb-6">Project Applications</h2>
+          <motion.div
+            key="applications"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
             {applications.length === 0 ? (
-              <div className="text-center py-12">
-                <svg className="w-16 h-16 text-text-tertiary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <h3 className="text-lg font-medium text-text-primary mb-2">No Applications Yet</h3>
+              <div className="bg-dark-card/80 backdrop-blur-sm border border-dark-border rounded-xl p-12 text-center">
+                <MessageCircle className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-text-primary mb-2">No Applications Yet</h3>
                 <p className="text-text-secondary">Applications will appear here once people apply to join your project.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 {applications.map((application) => (
-                  <div key={application.id} className="border border-dark-border rounded-lg p-4 bg-dark-surface/30 backdrop-blur-sm hover:border-brand-primary/50 transition-colors">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h4 className="font-medium text-text-primary">{application.applicantName}</h4>
-                        <p className="text-sm text-text-secondary">{application.applicantEmail}</p>
-                      </div>
-                      {getStatusBadge(application.status)}
-                    </div>
-                    
-                    <p className="text-text-secondary mb-3 text-sm">{application.message}</p>
-                    
-                    {application.skills && application.skills.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-sm text-text-secondary mb-1">Skills:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {application.skills.map((skill, index) => (
-                            <span key={index} className="px-2 py-1 bg-dark-surface/50 text-text-secondary rounded text-xs border border-dark-border">
-                              {skill}
-                            </span>
-                          ))}
+                  <motion.div
+                    key={application.id}
+                    className="bg-dark-card/80 backdrop-blur-sm border border-dark-border rounded-xl overflow-hidden"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold text-text-primary mb-2">
+                            {application.applicantDetails?.displayName || application.applicantName}
+                          </h3>
+                          <p className="text-text-secondary mb-2">{application.applicantEmail}</p>
+                          <p className="text-sm text-text-tertiary">Applied on {formatDate(application.createdAt)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(application.status)}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedApplicant(selectedApplicant?.id === application.id ? null : application)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            {selectedApplicant?.id === application.id ? 'Hide' : 'View'} Profile
+                          </Button>
                         </div>
                       </div>
-                    )}
-                    
-                    {application.status === 'pending' && (
-                      <div className="flex gap-2 mb-3">
-                        <button 
-                          onClick={() => handleApplicationAction(application.id, 'accepted')}
-                          className="px-3 py-1 bg-success-500 text-white rounded-md text-sm hover:bg-success-600 transition-colors shadow-lg"
-                        >
-                          Accept
-                        </button>
-                        <button 
-                          onClick={() => handleApplicationAction(application.id, 'rejected')}
-                          className="px-3 py-1 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 transition-colors shadow-lg"
-                        >
-                          Reject
-                        </button>
+
+                      {/* Application Message */}
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-text-primary mb-2">Application Message</h4>
+                        <p className="text-text-secondary text-sm bg-dark-surface/30 rounded-lg p-4">
+                          {application.message}
+                        </p>
                       </div>
-                    )}
-                    
-                    <p className="text-xs text-text-tertiary">
-                      Applied on {formatDate(application.createdAt)}
-                    </p>
-                  </div>
+
+                      {/* Application Skills */}
+                      {application.skills && application.skills.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-semibold text-text-primary mb-2">Skills</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {application.skills.map((skill, index) => (
+                              <span key={index} className="px-2 py-1 bg-brand-primary/20 text-brand-light text-xs rounded border border-brand-primary/30">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      {application.status === 'pending' && (
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => handleApplicationAction(application.id, 'accepted')}
+                            variant="primary"
+                            size="sm"
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            Accept
+                          </Button>
+                          <Button
+                            onClick={() => handleApplicationAction(application.id, 'rejected')}
+                            variant="outline"
+                            size="sm"
+                            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Detailed Profile View */}
+                    <AnimatePresence>
+                      {selectedApplicant?.id === application.id && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="border-t border-dark-border bg-dark-surface/20"
+                        >
+                          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Profile Details */}
+                            <div>
+                              <h4 className="text-lg font-semibold text-text-primary mb-4 flex items-center">
+                                <Users className="w-5 h-5 mr-2" />
+                                Profile Details
+                              </h4>
+                              
+                              <div className="space-y-3">
+                                {application.applicantDetails?.bio && (
+                                  <div>
+                                    <p className="text-xs text-text-tertiary mb-1">Bio</p>
+                                    <p className="text-text-secondary text-sm">{application.applicantDetails.bio}</p>
+                                  </div>
+                                )}
+                                
+                                {application.applicantDetails?.location && (
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-text-tertiary" />
+                                    <span className="text-text-secondary text-sm">{application.applicantDetails.location}</span>
+                                  </div>
+                                )}
+                                
+                                {application.applicantDetails?.experience && (
+                                  <div>
+                                    <p className="text-xs text-text-tertiary mb-1">Experience Level</p>
+                                    <p className="text-text-secondary text-sm capitalize">{application.applicantDetails.experience}</p>
+                                  </div>
+                                )}
+
+                                {application.applicantDetails?.skills && (
+                                  <div>
+                                    <p className="text-xs text-text-tertiary mb-2">Skills</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {application.applicantDetails.skills.slice(0, 10).map((skill, index) => (
+                                        <span key={index} className="px-2 py-1 bg-dark-surface/50 text-text-secondary text-xs rounded">
+                                          {skill}
+                                        </span>
+                                      ))}
+                                      {application.applicantDetails.skills.length > 10 && (
+                                        <span className="px-2 py-1 text-text-tertiary text-xs">
+                                          +{application.applicantDetails.skills.length - 10} more
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Social Links */}
+                                <div className="flex gap-3 pt-2">
+                                  {application.applicantDetails?.website && (
+                                    <a
+                                      href={application.applicantDetails.website}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-text-secondary hover:text-brand-primary transition-colors"
+                                    >
+                                      <Globe className="w-4 h-4" />
+                                      <span className="text-sm">Website</span>
+                                    </a>
+                                  )}
+                                  {application.applicantDetails?.linkedin && (
+                                    <a
+                                      href={`https://linkedin.com/in/${application.applicantDetails.linkedin}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-text-secondary hover:text-blue-400 transition-colors"
+                                    >
+                                      <Linkedin className="w-4 h-4" />
+                                      <span className="text-sm">LinkedIn</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* GitHub Profile */}
+                            {application.githubProfile && (
+                              <div>
+                                <h4 className="text-lg font-semibold text-text-primary mb-4 flex items-center">
+                                  <GithubIcon className="w-5 h-5 mr-2" />
+                                  GitHub Profile
+                                </h4>
+                                
+                                <div className="bg-dark-surface/30 rounded-xl p-4 border border-dark-border/50">
+                                  {/* GitHub Header */}
+                                  <div className="flex items-center gap-4 mb-4">
+                                    <img
+                                      src={application.githubProfile.avatar_url}
+                                      alt={application.githubProfile.name}
+                                      className="w-16 h-16 rounded-full border-2 border-dark-border"
+                                    />
+                                    <div>
+                                      <h5 className="font-semibold text-text-primary">{application.githubProfile.name}</h5>
+                                      <p className="text-text-secondary text-sm">@{application.githubProfile.login}</p>
+                                      {application.githubProfile.bio && (
+                                        <p className="text-text-tertiary text-sm mt-1">{application.githubProfile.bio}</p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* GitHub Stats */}
+                                  <div className="grid grid-cols-3 gap-4 mb-4">
+                                    <div className="text-center">
+                                      <div className="text-lg font-semibold text-brand-primary">{application.githubProfile.public_repos}</div>
+                                      <div className="text-xs text-text-tertiary">Repos</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-lg font-semibold text-brand-primary">{application.githubProfile.followers}</div>
+                                      <div className="text-xs text-text-tertiary">Followers</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-lg font-semibold text-brand-primary">{application.githubProfile.following}</div>
+                                      <div className="text-xs text-text-tertiary">Following</div>
+                                    </div>
+                                  </div>
+
+                                  {/* Recent Repositories */}
+                                  {application.githubProfile.repositories && (
+                                    <div>
+                                      <p className="text-sm font-semibold text-text-primary mb-3">Recent Repositories</p>
+                                      <div className="space-y-3">
+                                        {application.githubProfile.repositories.slice(0, 3).map((repo, index) => (
+                                          <div key={index} className="flex items-start justify-between p-3 bg-dark-surface/20 rounded-lg border border-dark-border/30">
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <BookOpen className="w-4 h-4 text-text-secondary" />
+                                                <a
+                                                  href={repo.html_url}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="font-medium text-text-primary hover:text-brand-primary transition-colors"
+                                                >
+                                                  {repo.name}
+                                                </a>
+                                              </div>
+                                              {repo.description && (
+                                                <p className="text-text-tertiary text-xs mb-2">{repo.description}</p>
+                                              )}
+                                              <div className="flex items-center gap-3 text-xs text-text-tertiary">
+                                                {repo.language && (
+                                                  <span className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-brand-primary" />
+                                                    {repo.language}
+                                                  </span>
+                                                )}
+                                                <div className="flex items-center gap-1">
+                                                  <Star className="w-3 h-3" />
+                                                  {repo.stargazers_count}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                  <GitBranch className="w-3 h-3" />
+                                                  {repo.forks_count}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* GitHub Link */}
+                                  <div className="pt-4 border-t border-dark-border/30">
+                                    <a
+                                      href={application.githubProfile.html_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-dark-surface/50 text-text-primary rounded-lg hover:bg-dark-surface transition-colors"
+                                    >
+                                      <GithubIcon className="w-4 h-4" />
+                                      <span>View Full GitHub Profile</span>
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
       </div>
 

@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-import { useSocket } from "@/lib/SocketContext";
+import { useSocket } from "@/lib/NotificationContext";
+import { useNotifications } from "@/lib/NotificationContext";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -27,6 +28,7 @@ import {
 export default function Navbar() {
   const { currentUser, userProfile, logout } = useAuth();
   const socketData = useSocket();
+  const { notifications: realNotifications, unreadCount, markAsRead } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function Navbar() {
   };
 
   const notifications = socketData?.notifications || [];
-  const unreadNotifications = notifications.filter(notif => !notif.read).length;
+  const unreadNotifications = unreadCount;
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -168,12 +170,12 @@ export default function Navbar() {
                         Notifications
                       </h3>
                       <span className="text-xs text-text-tertiary bg-text-tertiary/10 px-2 py-1 rounded-lg">
-                        {notifications.length} total
+                        {realNotifications.length} total
                       </span>
                     </div>
                   </div>
                   <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                    {notifications.length === 0 ? (
+                    {realNotifications.length === 0 ? (
                       <div className="p-6 text-center">
                         <Bell className="w-12 h-12 text-text-muted mx-auto mb-3" />
                         <p className="text-text-tertiary text-sm">No notifications yet</p>
@@ -181,32 +183,40 @@ export default function Navbar() {
                       </div>
                     ) : (
                       <>
-                        {notifications.slice(0, 5).map((notification, index) => (
+                        {realNotifications.slice(0, 5).map((notification, index) => (
                           <motion.div
                             key={notification.id}
                             className={`p-4 border-b border-dark-border/30 hover:bg-white/5 transition-colors cursor-pointer ${
-                              !notification.read ? 'bg-brand-primary/5 border-l-2 border-l-brand-primary' : ''
+                              !notification.isRead ? 'bg-brand-primary/5 border-l-2 border-l-brand-primary' : ''
                             }`}
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
                             whileHover={{ scale: 1.01 }}
+                            onClick={async () => {
+                              if (!notification.isRead) {
+                                await markAsRead(notification.id);
+                              }
+                            }}
                           >
-                            <p className="text-sm text-text-secondary">{notification.message}</p>
-                            <p className="text-xs text-text-muted mt-1">{notification.time}</p>
-                            {!notification.read && (
+                            <h4 className="text-sm font-medium text-text-primary">{notification.title}</h4>
+                            <p className="text-sm text-text-secondary mt-1">{notification.message}</p>
+                            <p className="text-xs text-text-muted mt-1">
+                              {notification.timeAgo || notification.formattedTime || 'Just now'}
+                            </p>
+                            {!notification.isRead && (
                               <div className="w-2 h-2 bg-brand-primary rounded-full absolute right-4 top-4" />
                             )}
                           </motion.div>
                         ))}
-                        {notifications.length > 5 && (
+                        {realNotifications.length > 5 && (
                           <div className="p-4 border-t border-dark-border/50">
                             <Link 
                               href="/dashboard/notifications"
                               className="block text-center text-sm text-brand-primary hover:text-brand-light transition-colors py-2 px-4 rounded-lg hover:bg-brand-primary/5"
                               onClick={() => setShowNotifications(false)}
                             >
-                              View all {notifications.length} notifications
+                              View all {realNotifications.length} notifications
                             </Link>
                           </div>
                         )}
@@ -236,6 +246,7 @@ export default function Navbar() {
                       width={32}
                       height={32}
                       className="w-full h-full object-cover"
+                      style={{ width: '32px', height: '32px' }}
                     />
                   </motion.div>
                 ) : (
@@ -270,6 +281,7 @@ export default function Navbar() {
                           width={40}
                           height={40}
                           className="w-10 h-10 rounded-full object-cover mr-3"
+                          style={{ width: '40px', height: '40px' }}
                         />
                       ) : (
                         <div className="w-10 h-10 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full flex items-center justify-center mr-3 text-white font-semibold">

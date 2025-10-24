@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { AuthProvider } from "@/lib/AuthContext";
 import { MessagingProvider } from "@/lib/contexts/MessagingContext";
+import { NotificationProvider } from "@/lib/NotificationContext";
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -11,9 +12,11 @@ interface ClientProvidersProps {
 export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <AuthProvider>
-      <MessagingProvider>
-        {children}
-      </MessagingProvider>
+      <NotificationProvider>
+        <MessagingProvider>
+          {children}
+        </MessagingProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }
