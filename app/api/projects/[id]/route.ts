@@ -4,9 +4,11 @@ import ProjectModel from '@/lib/models/Project';
 import ApplicationModel from '@/lib/models/Application';
 
 // GET /api/projects/[id]
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const request = _request;
   try {
-    const { id } = await params;
+    const params = await context.params;
+    const { id } = params;
     const project = await ProjectModel.getById(id);
     
     if (!project) {
@@ -30,9 +32,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // PUT /api/projects/[id]
-export const PUT = withAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
+export const PUT = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
+  const user = _user;
   try {
-    const { id } = await params;
+    const params = await context.params;
+    const { id } = params;
     const body = await request.json();
 
     const project = await ProjectModel.getById(id);
@@ -66,9 +70,11 @@ export const PUT = withAuth(async (request: NextRequest, user, { params }: { par
 });
 
 // DELETE /api/projects/[id]
-export const DELETE = withAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
+export const DELETE = withAuth(async (_request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
+  const user = _user;
   try {
-    const { id } = await params;
+    const params = await context.params;
+    const { id } = params;
 
     const project = await ProjectModel.getById(id);
     if (!project) {

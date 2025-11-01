@@ -4,11 +4,12 @@ import { getFirestore, initAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // DELETE /api/github/unlink-repository/:projectId
-export const DELETE = withAuth(async (request: NextRequest, user, { params }: { params: { projectId: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest, user, context: { params: Promise<{ projectId: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
+    const params = await context.params;
     const { projectId } = params;
 
     // Verify the project exists and user has permission

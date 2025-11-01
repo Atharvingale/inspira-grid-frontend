@@ -4,8 +4,9 @@ import { getFirestore, initAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // POST /api/projects/:id/favorite - Toggle project favorite
-export const POST = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const POST = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
+    const params = await context.params;
     const projectId = params.id;
     
     initAdmin();

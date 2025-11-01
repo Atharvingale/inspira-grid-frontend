@@ -168,7 +168,7 @@ const Messages = () => {
                     </h2>
                     <p className="text-sm text-slate-400 flex items-center">
                       <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
-                      {state.activeConversation.participants.length} participant{state.activeConversation.participants.length !== 1 ? 's' : ''}
+                      {state.activeConversation.participants?.length || 0} participant{(state.activeConversation.participants?.length || 0) !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
@@ -215,7 +215,7 @@ const Messages = () => {
                 (state.messages[state.activeConversation.id] || []).map((message) => {
                   // Get other participant for direct chats
                   const otherParticipant = state.activeConversation?.type === 'direct'
-                    ? state.activeConversation.participants.find(p => p.id !== currentUser?.uid)
+                    ? state.activeConversation.participants?.find(p => p.id !== currentUser?.uid)
                     : undefined;
                   
                   return (

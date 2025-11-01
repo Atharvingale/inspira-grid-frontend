@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, forwardRef } from "react";
+import React, { useState, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
@@ -75,11 +75,11 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
     const finalVariant = error ? "error" : success ? "success" : variant;
     const selectedOption = options.find(option => option.value === selectedValue);
     
-    const handleSelect = (optionValue: string) => {
+    const handleSelect = useCallback((optionValue: string) => {
       setSelectedValue(optionValue);
       onChange?.(optionValue);
       setIsOpen(false);
-    };
+    }, [onChange]);
 
     return (
       <div className="space-y-2" ref={ref} {...props}>

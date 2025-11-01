@@ -3,8 +3,9 @@ import { withAuth } from '@/lib/middleware/auth';
 import NotificationModel from '@/lib/models/Notification';
 
 // PATCH /api/notifications/[id]/read - Mark notification as read
-export const PATCH = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const PATCH = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
+    const params = await context.params;
     const { id } = params;
 
     // First check if notification exists and belongs to user

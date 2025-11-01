@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { githubService, type GitHubProfile } from '@/lib/services/githubService';
 import Loading from '@/components/common/Loading';
 import { motion } from 'framer-motion';
-import { User, MapPin, Globe, Github, Linkedin, Star, Award, Briefcase, Calendar, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
+import { User, MapPin, Globe, Github, Linkedin, Briefcase, ExternalLink, CheckCircle2, XCircle, Award, Calendar, Star } from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -190,6 +190,7 @@ const Profile = () => {
         window.history.replaceState({}, '', '/dashboard/profile');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load GitHub profile
@@ -197,6 +198,7 @@ const Profile = () => {
     if (currentUser && activeTab === 'github') {
       loadGitHubProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, activeTab]);
 
   const loadGitHubProfile = async () => {

@@ -49,6 +49,7 @@ export function NewConversationModal({
     if (isOpen && currentUser) {
       loadUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, currentUser]);
 
   // Debounced search effect
@@ -60,6 +61,7 @@ export function NewConversationModal({
     }, 300); // 300ms debounce
 
     return () => clearTimeout(debounceTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, projectId]);
 
   const loadUsers = async () => {

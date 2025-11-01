@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
 
 // PATCH /api/applications/:id/review
-export const PATCH = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const PATCH = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
+  const user = _user;
   try {
     initAdmin();
     const db = getFirestore();
     
+    const params = await context.params;
     const { id } = params;
     const body = await request.json();
     const { status, reviewMessage } = body;
@@ -50,6 +51,8 @@ export const PATCH = withAuth(async (request: NextRequest, user, { params }: { p
       );
     }
 
+    const { FieldValue } = await import('firebase-admin/firestore');
+    
     // Update application
     await db.collection('applications').doc(id).update({
       status,

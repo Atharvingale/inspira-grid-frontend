@@ -3,12 +3,13 @@ import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
 
 // GET /api/projects/:id/applications
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
+export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
-    const { id } = await params;
+    const params = await context.params;
+    const { id } = params;
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
 

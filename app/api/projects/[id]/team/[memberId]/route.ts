@@ -3,8 +3,9 @@ import { withAuth } from '@/lib/middleware/auth';
 import ProjectModel from '@/lib/models/Project';
 
 // DELETE /api/projects/:id/team/:memberId - Remove team member
-export const DELETE = withAuth(async (request: NextRequest, user, { params }: { params: { id: string; memberId: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string; memberId: string }> }) => {
   try {
+    const params = await context.params;
     const { id: projectId, memberId } = params;
 
     // Get project and verify ownership
@@ -47,8 +48,9 @@ export const DELETE = withAuth(async (request: NextRequest, user, { params }: { 
 });
 
 // PATCH /api/projects/:id/team/:memberId - Update team member role
-export const PATCH = withAuth(async (request: NextRequest, user, { params }: { params: { id: string; memberId: string } }) => {
+export const PATCH = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string; memberId: string }> }) => {
   try {
+    const params = await context.params;
     const { id: projectId, memberId } = params;
     const body = await request.json();
     const { role } = body;

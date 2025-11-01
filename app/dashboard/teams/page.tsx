@@ -10,23 +10,20 @@ import {
   Star,
   ArrowRight,
   Briefcase,
-  Clock,
   CheckCircle,
   AlertCircle,
   XCircle,
   Heart,
-  Filter,
-  ArrowUpDown,
   Settings,
   UserPlus,
-  UserMinus,
   X,
-  TrendingUp,
-  Archive,
   Eye,
   Activity,
-  Award,
-  Target
+  Target,
+  Clock,
+  Shield,
+  Archive,
+  Award
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';

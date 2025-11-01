@@ -130,7 +130,7 @@ export const ProfileCompletionCard = ({ userProfile, compact = false }: ProfileC
           <div className="mb-4">
             <p className="text-sm font-medium text-text-secondary mb-2">Missing information:</p>
             <div className="flex flex-wrap gap-2">
-              {completion.missingFields.slice(0, 5).map((field, index) => (
+              {completion.missingFields.slice(0, 5).map((field, _index) => (
                 <motion.span
                   key={field}
                   initial={{ opacity: 0, scale: 0.8 }}

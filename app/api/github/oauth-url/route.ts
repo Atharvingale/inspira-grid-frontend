@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 
 // GET /api/github/oauth-url
-export const GET = withAuth(async (request: NextRequest, user) => {
+export const GET = withAuth(async (_request: NextRequest, _user) => {
+  const user = _user;
   try {
     const clientId = process.env.GITHUB_CLIENT_ID;
     

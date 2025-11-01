@@ -14,7 +14,6 @@ import type {
   EnhancedMessage,
   Conversation,
   TypingIndicator,
-  UserPresenceStatus,
   SendMessageRequest,
   CreateConversationRequest,
   MessageSearchParams,
@@ -194,8 +193,9 @@ export const useMessaging = (): UseMessagingReturn => {
       }
 
       // Clear all typing timeouts
-      typingTimeoutRef.current.forEach(timeout => clearTimeout(timeout));
-      typingTimeoutRef.current.clear();
+      const timeouts = typingTimeoutRef.current;
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts.clear();
     };
   }, [socket?.socket, currentUser, currentConversation]);
 
@@ -206,6 +206,7 @@ export const useMessaging = (): UseMessagingReturn => {
   // Load conversations on mount
   useEffect(() => {
     loadConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   const loadConversations = async () => {
@@ -292,6 +293,7 @@ export const useMessaging = (): UseMessagingReturn => {
     if (socket?.socket) {
       socket.socket.emit('join_conversation_room', conversationId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations, socket]);
 
   const sendMessage = useCallback(async (request: SendMessageRequest): Promise<void> => {
@@ -354,6 +356,7 @@ export const useMessaging = (): UseMessagingReturn => {
   const loadMoreMessages = useCallback(async (): Promise<void> => {
     if (!currentConversation || loading.messages) return;
     await loadMessages(currentConversation.id, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentConversation, loading.messages]);
 
   const createConversation = useCallback(async (request: CreateConversationRequest): Promise<string> => {

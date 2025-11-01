@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import { MousePointer, User } from 'lucide-react';
 import { LiveCursor, User as UserType } from '@/lib/types/collaboration';
 import { cn } from '@/lib/utils';
@@ -161,10 +162,12 @@ function UserAvatar({
       title={`${user.name} (${user.status})`}
     >
       {user.avatar ? (
-        <img 
+        <Image 
           src={user.avatar} 
           alt={user.name}
-          className="w-full h-full rounded-full object-cover"
+          fill
+          sizes="48px"
+          className="rounded-full object-cover"
         />
       ) : (
         user.name.charAt(0).toUpperCase()
@@ -252,9 +255,10 @@ export default function LiveCursors({
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    const timeouts = fadeTimeoutRefs.current;
     return () => {
-      fadeTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-      fadeTimeoutRefs.current.clear();
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts.clear();
     };
   }, []);
 

@@ -175,7 +175,7 @@ export interface Notification extends BaseEntity {
   userId: string;
   title: string;
   message: string;
-  type: 'application' | 'message' | 'team_invite' | 'project_update' | 'system';
+  type: 'application_received' | 'application_accepted' | 'application_rejected' | 'project_update' | 'new_team_member' | 'project_completed' | 'message' | 'system' | 'team_invite';
   isRead: boolean;
   readAt?: string | { seconds: number };
   actionUrl?: string;
@@ -184,6 +184,16 @@ export interface Notification extends BaseEntity {
     applicationId?: string;
     messageId?: string;
     teamId?: string;
+    [key: string]: any;
+  };
+  data?: {
+    applicationId?: string;
+    projectId?: string;
+    projectTitle?: string;
+    applicantName?: string;
+    reviewNote?: string;
+    updateType?: string;
+    [key: string]: any;
   };
 }
 

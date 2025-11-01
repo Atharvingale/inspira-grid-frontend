@@ -1,5 +1,6 @@
 import { getFirestore, initAdmin } from '../firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase-admin/firestore';
 
 class ProjectModel {
   private get collection() {
@@ -31,7 +32,7 @@ class ProjectModel {
   }
 
   // Get project by ID
-  async getById(projectId: string) {
+  async getById(projectId: string): Promise<any> {
     try {
       const doc = await this.collection.doc(projectId).get();
       if (!doc.exists) {
@@ -45,7 +46,7 @@ class ProjectModel {
   }
 
   // Get all projects with filters
-  async getAll(filters: any = {}) {
+  async getAll(filters: any = {}): Promise<any[]> {
     try {
       let query: any = this.collection;
 
@@ -71,7 +72,7 @@ class ProjectModel {
       }
 
       const snapshot = await query.get();
-      return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error('Error getting projects:', error);
       throw error;
@@ -156,14 +157,14 @@ class ProjectModel {
   }
 
   // Get projects by team member
-  async getByTeamMember(userId: string) {
+  async getByTeamMember(userId: string): Promise<any[]> {
     try {
       const snapshot = await this.collection
         .where('teamMembers', 'array-contains', { userId })
         .orderBy('updatedAt', 'desc')
         .get();
 
-      return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error('Error getting projects by team member:', error);
       throw error;

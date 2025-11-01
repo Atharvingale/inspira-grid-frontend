@@ -1,5 +1,6 @@
 import { getFirestore, initAdmin } from '../firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase-admin/firestore';
 import ProjectModel from './Project';
 
 class ApplicationModel {
@@ -40,7 +41,7 @@ class ApplicationModel {
   }
 
   // Get application by ID
-  async getById(applicationId: string) {
+  async getById(applicationId: string): Promise<any> {
     try {
       const doc = await this.collection.doc(applicationId).get();
       if (!doc.exists) {
@@ -54,7 +55,7 @@ class ApplicationModel {
   }
 
   // Get applications by project
-  async getByProject(projectId: string, status: string | null = null) {
+  async getByProject(projectId: string, status: string | null = null): Promise<any[]> {
     try {
       let query: any = this.collection.where('projectId', '==', projectId);
       
@@ -65,7 +66,7 @@ class ApplicationModel {
       query = query.orderBy('createdAt', 'desc');
 
       const snapshot = await query.get();
-      return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error('Error getting applications by project:', error);
       throw error;
@@ -73,7 +74,7 @@ class ApplicationModel {
   }
 
   // Get applications by user
-  async getByUser(userId: string, status: string | null = null) {
+  async getByUser(userId: string, status: string | null = null): Promise<any[]> {
     try {
       let query: any = this.collection.where('applicantId', '==', userId);
       
@@ -84,15 +85,31 @@ class ApplicationModel {
       query = query.orderBy('createdAt', 'desc');
 
       const snapshot = await query.get();
-      return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error('Error getting applications by user:', error);
       throw error;
     }
   }
 
+  // Update application
+  async update(applicationId: string, updates: any): Promise<any> {
+    try {
+      const updateData = {
+        ...updates,
+        updatedAt: FieldValue.serverTimestamp()
+      };
+      
+      await this.collection.doc(applicationId).update(updateData);
+      return this.getById(applicationId);
+    } catch (error) {
+      console.error('Error updating application:', error);
+      throw error;
+    }
+  }
+
   // Update application status
-  async updateStatus(applicationId: string, status: string, reviewerId: string | null = null, reviewNote: string | null = null) {
+  async updateStatus(applicationId: string, status: string, reviewerId: string | null = null, reviewNote: string | null = null): Promise<any> {
     try {
       const updateData: any = {
         status,

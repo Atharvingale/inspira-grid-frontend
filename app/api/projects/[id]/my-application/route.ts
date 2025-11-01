@@ -3,8 +3,9 @@ import { withAuth } from '@/lib/middleware/auth';
 import ApplicationModel from '@/lib/models/Application';
 
 // GET /api/projects/:id/my-application - Check if user has applied to project
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
+    const params = await context.params;
     const projectId = params.id;
     
     // Check if user has already applied

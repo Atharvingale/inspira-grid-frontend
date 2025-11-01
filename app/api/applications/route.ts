@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
 
 // POST /api/applications - Create new application
-export const POST = withAuth(async (request: NextRequest, user) => {
+export const POST = withAuth(async (request: NextRequest, _user) => {
+  const user = _user;
   try {
     initAdmin();
     const db = getFirestore();
@@ -43,6 +43,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       );
     }
 
+    const { FieldValue } = await import('firebase-admin/firestore');
+    
     // Create application
     const applicationData = {
       projectId,

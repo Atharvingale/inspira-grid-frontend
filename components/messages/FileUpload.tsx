@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import NextImage from 'next/image';
 import Button from '@/components/ui/Button';
 import { Paperclip, X, Upload, File, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -199,11 +200,12 @@ export function FileUpload({
                 </div>
 
                 {selectedFile.type.startsWith('image/') && (
-                  <div className="mt-4">
-                    <img
+                  <div className="mt-4 relative h-32">
+                    <NextImage
                       src={URL.createObjectURL(selectedFile)}
                       alt="Preview"
-                      className="w-full h-32 object-cover rounded-lg"
+                      fill
+                      className="object-cover rounded-lg"
                     />
                   </div>
                 )}

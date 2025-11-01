@@ -3,8 +3,9 @@ import { withAuth } from '@/lib/middleware/auth';
 import ProjectModel from '@/lib/models/Project';
 
 // GET /api/projects/:id/team - Get project team members
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (_request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
   try {
+    const params = await context.params;
     const projectId = params.id;
     
     const project = await ProjectModel.getById(projectId);
@@ -38,8 +39,10 @@ export const GET = withAuth(async (request: NextRequest, user, { params }: { par
 });
 
 // POST /api/projects/:id/team - Add team member
-export const POST = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const POST = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
+  const user = _user;
   try {
+    const params = await context.params;
     const projectId = params.id;
     const body = await request.json();
     const { userId, role = 'member' } = body;
@@ -77,7 +80,7 @@ export const POST = withAuth(async (request: NextRequest, user, { params }: { pa
     }
 
     // Add team member
-    const updatedProject = await ProjectModel.addTeamMember(projectId, userId, role);
+    const _updatedProject = await ProjectModel.addTeamMember(projectId, userId, role);
     
     return NextResponse.json({ 
       message: 'Team member added successfully',

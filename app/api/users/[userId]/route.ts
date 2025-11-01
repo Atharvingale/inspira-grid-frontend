@@ -3,8 +3,9 @@ import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
 
 // GET /api/users/[userId]
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { userId: string } }) => {
+export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ userId: string }> }) => {
   try {
+    const params = await context.params;
     const { userId } = params;
     
     initAdmin();

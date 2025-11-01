@@ -11,19 +11,18 @@ import {
   BarChart3, 
   Rocket, 
   Target, 
-  Clock, 
   CheckCircle2,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Star,
   ArrowRight,
   Lightbulb,
   Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  TrendingUp,
   Award,
   Zap,
-  ArrowUpRight,
-  ArrowDownRight
+  Clock,
+  Calendar,
+  Star
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { apiClient } from "@/lib/api";
@@ -35,8 +34,6 @@ import {
   Area, 
   BarChart, 
   Bar, 
-  LineChart, 
-  Line, 
   PieChart, 
   Pie, 
   Cell,

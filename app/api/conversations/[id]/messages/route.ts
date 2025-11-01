@@ -159,8 +159,8 @@ export async function POST(
     };
 
     // Get updated conversation data for Pusher
-    const updatedConvDoc = await db.collection('conversations').doc(conversationId).get();
-    const updatedConvData = updatedConvDoc.data();
+    const _updatedConvDoc = await db.collection('conversations').doc(conversationId).get();
+    const _updatedConvData = _updatedConvDoc.data();
     
     // Trigger Pusher event for all participants in the conversation
     for (const participantId of convData.participantIds) {

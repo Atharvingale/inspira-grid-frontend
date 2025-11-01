@@ -4,11 +4,12 @@ import { getFirestore, initAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // PATCH /api/change-requests/:id - Approve or reject a change request
-export const PATCH = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const PATCH = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
+    const params = await context.params;
     const { id: changeRequestId } = params;
     const body = await request.json();
     const { action, reviewNote } = body;
@@ -120,11 +121,12 @@ export const PATCH = withAuth(async (request: NextRequest, user, { params }: { p
 });
 
 // DELETE /api/change-requests/:id - Delete/withdraw a change request
-export const DELETE = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
+    const params = await context.params;
     const { id: changeRequestId } = params;
 
     // Get change request

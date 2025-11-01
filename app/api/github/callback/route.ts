@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
 
 // GET /api/github/callback
 export async function GET(request: NextRequest) {
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
     let stateData;
     try {
       stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.redirect(
         new URL('/dashboard/profile?error=auth_state_missing', request.url)
       );
@@ -75,6 +74,7 @@ export async function GET(request: NextRequest) {
     // Save GitHub data to Firestore
     initAdmin();
     const db = getFirestore();
+    const { FieldValue } = await import('firebase-admin/firestore');
     
     await db.collection('users').doc(userId).update({
       githubProfile: {

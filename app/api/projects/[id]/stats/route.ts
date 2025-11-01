@@ -4,8 +4,9 @@ import ProjectModel from '@/lib/models/Project';
 import ApplicationModel from '@/lib/models/Application';
 
 // GET /api/projects/:id/stats - Get project statistics
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
+    const params = await context.params;
     const projectId = params.id;
     
     // Get project

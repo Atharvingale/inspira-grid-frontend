@@ -8,18 +8,17 @@ import {
   Filter,
   Plus,
   Users,
-  Code,
-  Calendar,
   Star,
-  TrendingUp,
-  Clock,
   Eye,
   Heart,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   X,
-  Folder
+  Folder,
+  Code,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -190,6 +189,7 @@ const Projects = () => {
       const sorted = sortProjects([...filteredProjects], sortBy);
       setFilteredProjects(sorted);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
 
   const sortProjects = (projects: Project[], sortType: string) => {

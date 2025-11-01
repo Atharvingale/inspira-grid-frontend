@@ -3,8 +3,9 @@ import { withAuth } from '@/lib/middleware/auth';
 import NotificationModel from '@/lib/models/Notification';
 
 // GET /api/notifications/[id] - Get notification by ID
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
+    const params = await context.params;
     const { id } = params;
 
     const notification = await NotificationModel.getById(id);
@@ -48,8 +49,9 @@ export const GET = withAuth(async (request: NextRequest, user, { params }: { par
 });
 
 // DELETE /api/notifications/[id] - Delete notification
-export const DELETE = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
+    const params = await context.params;
     const { id } = params;
 
     // First check if notification exists and belongs to user

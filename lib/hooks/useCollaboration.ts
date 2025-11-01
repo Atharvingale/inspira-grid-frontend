@@ -5,27 +5,7 @@
  * sessions, presence, cursors, document editing, comments, and activity feeds.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { collaborationService } from '@/lib/services/collaborationService';
-import { useSocketContext } from '@/lib/SocketContext';
 import {
-  CollaborationSession,
-  JoinSessionRequest,
-  UserPresence,
-  LiveCursor,
-  EditingIndicator,
-  DocumentState,
-  SyncConflict,
-  Operation,
-  ActivityFeedItem,
-  ActivityFilter,
-  Comment,
-  CommentThread,
-  LiveSelection,
-  SharedHighlight,
-  AwarenessInfo,
-  ContextAwareness,
-  CollaborationEvent,
   UseCollaborationReturn,
   UseActivityFeedReturn,
   UseCommentsReturn
@@ -36,9 +16,9 @@ import {
 // =====================================
 
 export const useCollaboration = (
-  contextId: string,
-  contextType: string,
-  autoJoin: boolean = true
+  _contextId: string,
+  _contextType: string,
+  _autoJoin: boolean = true
 ): UseCollaborationReturn => {
   // TEMPORARILY DISABLED - Collaboration features require Socket.io or migration to Pusher
   // See COLLABORATION_MIGRATION.md for details
@@ -432,9 +412,9 @@ export const useCollaboration = (
 // =====================================
 
 export const useActivityFeed = (
-  contextId?: string,
-  contextType?: string,
-  autoLoad: boolean = true
+  _contextId?: string,
+  _contextType?: string,
+  _autoLoad: boolean = true
 ): UseActivityFeedReturn => {
   // TEMPORARILY DISABLED - Activity feed requires Socket.io or migration to Pusher
   
@@ -653,9 +633,9 @@ export const useActivityFeed = (
 // =====================================
 
 export const useComments = (
-  contextId: string,
-  contextType: string,
-  autoLoad: boolean = true
+  _contextId: string,
+  _contextType: string,
+  _autoLoad: boolean = true
 ): UseCommentsReturn => {
   // TEMPORARILY DISABLED - Comments require Socket.io or migration to Pusher
   
@@ -891,7 +871,7 @@ export const useComments = (
 // Live Selection Hook
 // =====================================
 
-export const useLiveSelection = (contextId: string, contextType: string) => {
+export const useLiveSelection = (_contextId: string, _contextType: string) => {
   // TEMPORARILY DISABLED - Live selection requires Socket.io or migration to Pusher
   
   return {

@@ -1,50 +1,36 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
   Send,
   Paperclip,
   Smile,
   MoreVertical,
   Reply,
-  Heart,
-  ThumbsUp,
-  Laugh,
   Search,
-  Filter,
   Phone,
   Video,
   Info,
   Hash,
   Users,
   Pin,
-  Archive,
-  Bell,
-  BellOff,
   MessageCircle,
   Image,
   File,
-  Mic,
   X,
   Edit3,
-  Trash2,
-  Copy,
-  Forward
+  Trash2
 } from 'lucide-react';
 import { useMessaging } from '@/lib/hooks/useMessaging';
 import { 
   Conversation, 
   EnhancedMessage, 
-  MessageReaction,
   TypingIndicator as TypingIndicatorType 
 } from '@/lib/types/messaging';
-import { User } from '@/lib/types/collaboration';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import Textarea from '@/components/ui/Textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -389,7 +375,6 @@ function MessageInput({
 }) {
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
@@ -549,7 +534,6 @@ export default function MessagingInterface({
 }: MessagingInterfaceProps) {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<EnhancedMessage | null>(null);
-  const [editingMessage, setEditingMessage] = useState<EnhancedMessage | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 

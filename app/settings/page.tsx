@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Lock, Shield, Info, Check, Save, Mail, Key, User, Download, Trash2 } from "lucide-react";
+import { Bell, Lock, Shield, Info, Check, User } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useAuth } from "@/lib/AuthContext";

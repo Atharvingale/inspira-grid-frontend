@@ -4,14 +4,18 @@ import { getFirestore, initAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // POST /api/projects/:id/change-requests - Create a change request
-export const POST = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const POST = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
+    const params = await context.params;
     const { id: projectId } = params;
     const body = await request.json();
     const { changes, description, changeType } = body;
+
+    console.log('[Change Request] User ID:', user.uid);
+    console.log('[Change Request] Project ID:', projectId);
 
     if (!changes || !description) {
       return NextResponse.json(
@@ -23,6 +27,7 @@ export const POST = withAuth(async (request: NextRequest, user, { params }: { pa
     // Get project to verify membership
     const projectDoc = await db.collection('projects').doc(projectId).get();
     if (!projectDoc.exists) {
+      console.log('[Change Request] Project not found');
       return NextResponse.json(
         { success: false, error: 'Project not found' },
         { status: 404 }
@@ -33,18 +38,16 @@ export const POST = withAuth(async (request: NextRequest, user, { params }: { pa
     const isOwner = projectData?.ownerId === user.uid;
     const isTeamMember = projectData?.team?.some((member: any) => member.userId === user.uid);
 
-    if (!isOwner && !isTeamMember) {
-      return NextResponse.json(
-        { success: false, error: 'Only project owner and team members can create change requests' },
-        { status: 403 }
-      );
-    }
+    console.log('[Change Request] Project Owner ID:', projectData?.ownerId);
+    console.log('[Change Request] Is Owner:', isOwner);
+    console.log('[Change Request] Team:', projectData?.team);
+    console.log('[Change Request] Is Team Member:', isTeamMember);
 
-    // Owners can directly edit without change requests (optional logic)
-    if (isOwner) {
+    if (!isTeamMember) {
+      console.log('[Change Request] Authorization failed: User is not a team member');
       return NextResponse.json(
-        { success: false, error: 'Project owners can directly edit the project' },
-        { status: 400 }
+        { success: false, error: 'Only team members can create change requests' },
+        { status: 403 }
       );
     }
 
@@ -105,11 +108,12 @@ export const POST = withAuth(async (request: NextRequest, user, { params }: { pa
 });
 
 // GET /api/projects/:id/change-requests - Get change requests for a project
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
+    const params = await context.params;
     const { id: projectId } = params;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');

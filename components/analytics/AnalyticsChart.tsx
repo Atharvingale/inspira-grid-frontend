@@ -23,13 +23,13 @@ export default function AnalyticsChart({
   type,
   data,
   title,
-  xAxisLabel,
-  yAxisLabel,
-  color = '#3b82f6',
+  _xAxisLabel,
+  _yAxisLabel,
+  _color = '#3b82f6',
   height = 300,
   loading = false,
-  onDataPointClick,
-  options = {},
+  _onDataPointClick,
+  _options = {},
   className
 }: AnalyticsChartProps) {
   if (loading) {

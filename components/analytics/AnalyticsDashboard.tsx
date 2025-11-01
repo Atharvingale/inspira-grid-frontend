@@ -11,17 +11,13 @@ import {
   Activity,
   RefreshCw,
   Download,
-  Settings,
-  Plus,
   Eye,
   EyeOff
 } from 'lucide-react';
 import { useAnalytics, useDashboardConfig } from '@/lib/hooks/useAnalytics';
 import { 
-  DashboardConfig, 
   DashboardWidget, 
-  DateRange,
-  MetricComparison 
+  DateRange
 } from '@/lib/types/analytics';
 import MetricCard from './MetricCard';
 import AnalyticsChart from './AnalyticsChart';
@@ -49,14 +45,10 @@ export default function AnalyticsDashboard({
   // State
   const [timeframe, setTimeframe] = useState<DateRange>(defaultTimeframe);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
   // Hooks
   const {
     dashboardMetrics,
-    projectAnalytics,
-    teamAnalytics,
-    financialAnalytics,
     loading,
     actions
   } = useAnalytics(true);

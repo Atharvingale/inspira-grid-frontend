@@ -3,11 +3,12 @@ import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
 
 // GET /api/github/repositories/:owner/:repo/commits
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { owner: string; repo: string } }) => {
+export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ owner: string; repo: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
+    const params = await context.params;
     const { owner, repo } = params;
     
     // Get user's GitHub access token
