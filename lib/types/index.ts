@@ -135,6 +135,41 @@ export interface TeamInvitation {
   createdAt: string | { seconds: number };
 }
 
+// Change Request types
+export interface ChangeRequest extends BaseEntity {
+  projectId: string;
+  projectTitle?: string;
+  requestedBy: string;
+  requestedByName: string;
+  requestedByEmail?: string;
+  changeType: 'project_details' | 'team_member' | 'status' | 'other';
+  changes: ProjectChanges;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string | { seconds: number };
+  reviewNote?: string;
+}
+
+export interface ProjectChanges {
+  title?: string;
+  description?: string;
+  category?: string;
+  status?: string;
+  requiredSkills?: string[];
+  teamSize?: number;
+  deadline?: string;
+  budget?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  tags?: string[];
+  visibility?: 'public' | 'private';
+  [key: string]: any;
+}
+
 // Notification types
 export interface Notification extends BaseEntity {
   userId: string;

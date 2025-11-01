@@ -22,7 +22,7 @@ import type {
  */
 class MessagingService extends BaseService {
   constructor() {
-    super('/api/messages');
+    super('/messages');
   }
 
   // =====================================

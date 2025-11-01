@@ -114,6 +114,11 @@ const ProjectDetails = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedApplicant, setSelectedApplicant] = useState<Application | null>(null);
+  const [changeRequests, setChangeRequests] = useState<any[]>([]);
+  const [showProposeChangeModal, setShowProposeChangeModal] = useState(false);
+  const [proposedChanges, setProposedChanges] = useState<any>({});
+  const [changeDescription, setChangeDescription] = useState('');
+  const [submittingChange, setSubmittingChange] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -126,13 +131,16 @@ const ProjectDetails = () => {
     if (project && project.isOwner && activeTab === 'applications') {
       loadApplications();
     }
+    if (project && (project.isOwner || project.isTeamMember) && activeTab === 'change-requests') {
+      loadChangeRequests();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, activeTab]);
 
   const loadProject = async () => {
     try {
       setLoading(true);
-      const data = await api.get(`/api/projects/${id}`);
+      const data = await api.get(`/projects/${id}`);
       setProject(data as Project);
     } catch (error: any) {
       console.error('Error loading project:', error);
@@ -147,10 +155,10 @@ const ProjectDetails = () => {
 
   const loadApplications = async () => {
     try {
-      const data = await api.get(`/api/projects/${id}/applications`);
+      const data = await api.get(`/projects/${id}/applications`);
       // Simulate loading GitHub profiles for each applicant
       const applicationsWithGitHub = await Promise.all(
-        (data as any)?.applications?.map(async (app: Application) => {
+        (data as any)?.data?.map(async (app: Application) => {
           if (app.applicantDetails?.github) {
             try {
               // Mock GitHub API call - replace with actual API
@@ -210,7 +218,7 @@ const ProjectDetails = () => {
 
     try {
       setApplying(true);
-      await api.post(`/api/projects/${id}/apply`, {
+      await api.post(`/projects/${id}/apply`, {
         message: applicationMessage.trim()
       });
       toast.success('Application submitted successfully!');
@@ -227,7 +235,7 @@ const ProjectDetails = () => {
 
   const handleApplicationAction = async (applicationId: string, action: 'accepted' | 'rejected', reviewNote = '') => {
     try {
-      await api.patch(`/api/applications/${applicationId}/status`, {
+      await api.patch(`/applications/${applicationId}/status`, {
         status: action,
         reviewNote
       });
@@ -237,6 +245,61 @@ const ProjectDetails = () => {
     } catch (error: any) {
       console.error('Error updating application:', error);
       toast.error(error.response?.data?.message || 'Failed to update application');
+    }
+  };
+
+  const loadChangeRequests = async () => {
+    try {
+      const data = await api.get(`/projects/${id}/change-requests`);
+      setChangeRequests((data as any)?.data || []);
+    } catch (error: any) {
+      console.error('Error loading change requests:', error);
+      toast.error('Failed to load change requests');
+    }
+  };
+
+  const handleProposeChange = async () => {
+    if (!changeDescription.trim() || Object.keys(proposedChanges).length === 0) {
+      toast.error('Please provide changes and a description');
+      return;
+    }
+
+    try {
+      setSubmittingChange(true);
+      await api.post(`/projects/${id}/change-requests`, {
+        changes: proposedChanges,
+        description: changeDescription,
+        changeType: 'project_details'
+      });
+      toast.success('Change request submitted successfully!');
+      setShowProposeChangeModal(false);
+      setProposedChanges({});
+      setChangeDescription('');
+      if (activeTab === 'change-requests') {
+        loadChangeRequests();
+      }
+    } catch (error: any) {
+      console.error('Error submitting change request:', error);
+      toast.error(error.response?.data?.error || 'Failed to submit change request');
+    } finally {
+      setSubmittingChange(false);
+    }
+  };
+
+  const handleReviewChangeRequest = async (changeRequestId: string, action: 'approve' | 'reject', reviewNote = '') => {
+    try {
+      await api.patch(`/change-requests/${changeRequestId}`, {
+        action,
+        reviewNote
+      });
+      toast.success(`Change request ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
+      loadChangeRequests();
+      if (action === 'approve') {
+        loadProject(); // Refresh project if changes were approved
+      }
+    } catch (error: any) {
+      console.error('Error reviewing change request:', error);
+      toast.error(error.response?.data?.error || 'Failed to review change request');
     }
   };
 
@@ -289,6 +352,7 @@ const ProjectDetails = () => {
 
   const canApply = !project.isOwner && !project.isTeamMember && !project.hasApplied && project.status === 'open';
   const canManage = project.isOwner;
+  const canProposeChanges = project.isTeamMember && !project.isOwner;
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -364,6 +428,18 @@ const ProjectDetails = () => {
                 </button>
               )}
               
+              {canProposeChanges && (
+                <button 
+                  onClick={() => setShowProposeChangeModal(true)}
+                  className="px-4 py-2 border border-brand-secondary text-brand-secondary rounded-lg hover:bg-brand-secondary/10 transition-colors backdrop-blur-sm"
+                >
+                  <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Propose Changes
+                </button>
+              )}
+              
               <button 
                 onClick={() => router.push('/dashboard/projects')}
                 className="px-4 py-2 border border-dark-border text-text-secondary rounded-lg hover:bg-dark-surface/50 hover:text-text-primary transition-colors backdrop-blur-sm"
@@ -432,6 +508,18 @@ const ProjectDetails = () => {
                 }`}
               >
                 Applications ({applications.length})
+              </button>
+            )}
+            {(canManage || canProposeChanges) && (
+              <button
+                onClick={() => setActiveTab('change-requests')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'change-requests'
+                    ? 'border-brand-primary text-brand-primary'
+                    : 'border-transparent text-text-secondary hover:text-text-primary hover:border-dark-border'
+                }`}
+              >
+                Change Requests ({changeRequests.filter((cr: any) => cr.status === 'pending').length})
               </button>
             )}
           </nav>
@@ -573,6 +661,104 @@ const ProjectDetails = () => {
               <p className="text-text-secondary">Real-time messaging functionality will be available here.</p>
             </div>
           </div>
+        )}
+
+        {/* Change Requests Tab */}
+        {activeTab === 'change-requests' && (canManage || canProposeChanges) && (
+          <motion.div
+            key="change-requests"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            {changeRequests.length === 0 ? (
+              <div className="bg-dark-card/80 backdrop-blur-sm border border-dark-border rounded-xl p-12 text-center">
+                <MessageCircle className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-text-primary mb-2">No Change Requests</h3>
+                <p className="text-text-secondary">Change requests from team members will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {changeRequests.map((changeRequest) => (
+                  <motion.div
+                    key={changeRequest.id}
+                    className="bg-dark-card/80 backdrop-blur-sm border border-dark-border rounded-xl p-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-text-primary mb-2">
+                          Change Request by {changeRequest.requestedByName}
+                        </h3>
+                        <p className="text-text-secondary mb-2">{changeRequest.requestedByEmail}</p>
+                        <p className="text-sm text-text-tertiary">Requested on {formatDate(changeRequest.createdAt)}</p>
+                      </div>
+                      <div>
+                        {getStatusBadge(changeRequest.status)}
+                      </div>
+                    </div>
+
+                    {/* Change Description */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-text-primary mb-2">Description</h4>
+                      <p className="text-text-secondary text-sm bg-dark-surface/30 rounded-lg p-4">
+                        {changeRequest.description}
+                      </p>
+                    </div>
+
+                    {/* Proposed Changes */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-text-primary mb-2">Proposed Changes</h4>
+                      <div className="bg-dark-surface/30 rounded-lg p-4 space-y-2">
+                        {Object.entries(changeRequest.changes || {}).map(([key, value]: [string, any]) => (
+                          <div key={key} className="flex items-start gap-2">
+                            <span className="text-brand-primary font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                            <span className="text-text-secondary flex-1">
+                              {Array.isArray(value) ? value.join(', ') : String(value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Review Note */}
+                    {changeRequest.reviewNote && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-text-primary mb-2">Review Note</h4>
+                        <p className="text-text-secondary text-sm bg-dark-surface/30 rounded-lg p-4">
+                          {changeRequest.reviewNote}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Action Buttons (Only for owner and pending requests) */}
+                    {canManage && changeRequest.status === 'pending' && (
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => handleReviewChangeRequest(changeRequest.id, 'approve')}
+                          variant="primary"
+                          size="sm"
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleReviewChangeRequest(changeRequest.id, 'reject')}
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
         )}
 
         {/* Applications Tab - Enhanced with GitHub Integration */}
@@ -939,6 +1125,136 @@ const ProjectDetails = () => {
                       </svg>
                       Submit Application
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Propose Changes Modal */}
+      {showProposeChangeModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border border-dark-border w-full max-w-3xl shadow-2xl rounded-lg bg-dark-card backdrop-blur-md">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-text-primary">
+                  Propose Changes to {project?.title}
+                </h3>
+                <button
+                  onClick={() => setShowProposeChangeModal(false)}
+                  className="text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="bg-brand-secondary/10 border border-brand-secondary/30 rounded-lg p-4 mb-4">
+                <p className="text-sm text-brand-light">
+                  As a team member, you can propose changes to this project. The project owner will review and approve or reject your suggestions.
+                </p>
+              </div>
+
+              {/* Change Fields */}
+              <div className="space-y-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Project Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={project?.title}
+                    value={proposedChanges.title || ''}
+                    onChange={(e) => setProposedChanges({ ...proposedChanges, title: e.target.value })}
+                    className="w-full px-3 py-2 border border-dark-border rounded-md bg-dark-surface/50 text-text-primary placeholder-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    placeholder={project?.description}
+                    value={proposedChanges.description || ''}
+                    onChange={(e) => setProposedChanges({ ...proposedChanges, description: e.target.value })}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-dark-border rounded-md bg-dark-surface/50 text-text-primary placeholder-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={project?.category}
+                    value={proposedChanges.category || ''}
+                    onChange={(e) => setProposedChanges({ ...proposedChanges, category: e.target.value })}
+                    className="w-full px-3 py-2 border border-dark-border rounded-md bg-dark-surface/50 text-text-primary placeholder-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={proposedChanges.status || ''}
+                    onChange={(e) => setProposedChanges({ ...proposedChanges, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-dark-border rounded-md bg-dark-surface/50 text-text-primary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                  >
+                    <option value="">Select status...</option>
+                    <option value="open">Open</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Reason for Changes *
+                </label>
+                <textarea
+                  value={changeDescription}
+                  onChange={(e) => setChangeDescription(e.target.value)}
+                  placeholder="Explain why you're proposing these changes and how they will benefit the project..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-dark-border rounded-md bg-dark-surface/50 text-text-primary placeholder-text-tertiary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                />
+                <p className="text-sm text-text-tertiary mt-1">
+                  Provide a clear explanation for the project owner to review.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => setShowProposeChangeModal(false)}
+                  disabled={submittingChange}
+                  className="px-4 py-2 bg-dark-surface/50 text-text-secondary text-sm font-medium rounded-md hover:bg-dark-surface hover:text-text-primary disabled:opacity-50 transition-colors border border-dark-border"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleProposeChange}
+                  disabled={submittingChange || !changeDescription.trim() || Object.keys(proposedChanges).length === 0}
+                  className="px-4 py-2 bg-gradient-to-r from-brand-primary to-brand-secondary text-white text-sm font-medium rounded-md hover:from-brand-primary/90 hover:to-brand-secondary/90 disabled:opacity-50 transition-all shadow-lg hover:shadow-xl"
+                >
+                  {submittingChange ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Change Request'
                   )}
                 </button>
               </div>

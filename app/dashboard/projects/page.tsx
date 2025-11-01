@@ -246,7 +246,7 @@ const Projects = () => {
 
     try {
       setApplying(true);
-      await apiClient.post(`/api/projects/${selectedProject.id}/apply`, {
+      await apiClient.post(`/projects/${selectedProject.id}/apply`, {
         message: applicationMessage.trim()
       });
       toast.success('Application submitted successfully!');
@@ -257,7 +257,7 @@ const Projects = () => {
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedStatus) params.append('status', selectedStatus);
       params.append('limit', '100');
-      const response = await apiClient.get(`/api/projects?${params.toString()}`);
+      const response = await apiClient.get(`/projects?${params.toString()}`);
       setFilteredProjects((response as any)?.projects || []);
     } catch (error: any) {
       console.error('Error applying to project:', error);

@@ -5,9 +5,9 @@ import ApplicationModel from '@/lib/models/Application';
 import NotificationModel from '@/lib/models/Notification';
 
 // POST /api/projects/[id]/apply
-export const POST = withCompleteProfile(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const POST = withCompleteProfile(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     if (!body.message || body.message.length < 10 || body.message.length > 500) {

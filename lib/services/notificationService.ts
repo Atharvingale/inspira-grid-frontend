@@ -290,8 +290,9 @@ class NotificationService extends BaseService {
   async getNotificationStream(): Promise<EventSource> {
     // Get auth headers for SSE connection
     const headers = await import('@/lib/api').then(m => m.authHeaders());
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    const url = `${baseUrl}/api/notifications/stream/realtime`;
+    const { API_BASE_URL } = await import('@/lib/api');
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const url = `${baseUrl}${API_BASE_URL}/notifications/stream/realtime`;
     
     // For SSE with auth, we need to pass the token as a query parameter
     // since EventSource doesn't support custom headers

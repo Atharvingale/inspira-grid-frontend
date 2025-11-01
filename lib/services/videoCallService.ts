@@ -24,7 +24,7 @@ import type {
  */
 class VideoCallService extends BaseService {
   constructor() {
-    super('/api/calls');
+    super('/calls');
   }
 
   // =====================================

@@ -36,7 +36,8 @@ class BaseService {
 
   constructor(basePath?: string) {
     // Check for undefined explicitly - empty string '' is intentional and means no base path
-    this.baseUrl = basePath !== undefined ? basePath : (process.env.NEXT_PUBLIC_API_BASE_URL || '/api');
+    // Note: Don't add '/api' here since the api() function already adds it
+    this.baseUrl = basePath !== undefined ? basePath : '';
   }
 
   /**

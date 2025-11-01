@@ -80,10 +80,10 @@ export async function validateFirebaseToken(request: NextRequest): Promise<Authe
  * Higher-order function to protect API routes with authentication
  * Usage: export const GET = withAuth(async (request, user) => { ... })
  */
-export function withAuth(
-  handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>
+export function withAuth<T = any>(
+  handler: (request: NextRequest, user: AuthenticatedUser, context?: T) => Promise<Response>
 ) {
-  return async (request: NextRequest): Promise<Response> => {
+  return async (request: NextRequest, context?: T): Promise<Response> => {
     const user = await validateFirebaseToken(request);
     
     if (!user) {
@@ -96,17 +96,17 @@ export function withAuth(
       );
     }
     
-    return handler(request, user);
+    return handler(request, user, context);
   };
 }
 
 /**
  * Middleware to check if user's profile is complete
  */
-export function withCompleteProfile(
-  handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>
+export function withCompleteProfile<T = any>(
+  handler: (request: NextRequest, user: AuthenticatedUser, context?: T) => Promise<Response>
 ) {
-  return withAuth(async (request: NextRequest, user: AuthenticatedUser): Promise<Response> => {
+  return withAuth(async (request: NextRequest, user: AuthenticatedUser, context?: T): Promise<Response> => {
     if (!user.profileComplete) {
       return NextResponse.json(
         {
@@ -118,17 +118,17 @@ export function withCompleteProfile(
       );
     }
     
-    return handler(request, user);
+    return handler(request, user, context);
   });
 }
 
 /**
  * Middleware to check if user has admin role
  */
-export function withAdmin(
-  handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>
+export function withAdmin<T = any>(
+  handler: (request: NextRequest, user: AuthenticatedUser, context?: T) => Promise<Response>
 ) {
-  return withAuth(async (request: NextRequest, user: AuthenticatedUser): Promise<Response> => {
+  return withAuth(async (request: NextRequest, user: AuthenticatedUser, context?: T): Promise<Response> => {
     if (user.role !== 'admin') {
       return NextResponse.json(
         {
@@ -139,7 +139,7 @@ export function withAdmin(
       );
     }
     
-    return handler(request, user);
+    return handler(request, user, context);
   });
 }
 

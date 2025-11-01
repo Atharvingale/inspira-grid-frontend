@@ -5,9 +5,9 @@ import ProjectModel from '@/lib/models/Project';
 import NotificationModel from '@/lib/models/Notification';
 
 // PATCH /api/applications/[id]/status
-export const PATCH = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
+export const PATCH = withAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     if (!['accepted', 'rejected'].includes(body.status)) {

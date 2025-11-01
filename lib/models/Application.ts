@@ -145,12 +145,13 @@ class ApplicationModel {
     }
   }
 
-  // Check if user has already applied to project
+  // Check if user has already applied to project (excluding accepted applications)
   async hasApplied(userId: string, projectId: string) {
     try {
       const snapshot = await this.collection
         .where('applicantId', '==', userId)
         .where('projectId', '==', projectId)
+        .where('status', 'in', ['pending', 'rejected'])
         .get();
 
       return !snapshot.empty;

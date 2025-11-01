@@ -163,7 +163,7 @@ const CreateProject = () => {
         budget: formData.budget.trim(),
       };
 
-      await api.post('/api/projects', projectData);
+      await api.post('/projects', projectData);
       
       toast.success('Project created successfully! It will be reviewed by admins.');
       router.push('/dashboard/projects');

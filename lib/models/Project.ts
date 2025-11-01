@@ -118,7 +118,7 @@ class ProjectModel {
       const teamMember = {
         userId,
         role,
-        joinedAt: FieldValue.serverTimestamp()
+        joinedAt: new Date().toISOString()
       };
 
       await this.collection.doc(projectId).update({
