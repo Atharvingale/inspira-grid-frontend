@@ -1,0 +1,80 @@
+{
+  "family": "inspira-grid-frontend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::717244548768:role/ECSTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "inspira-grid-frontend",
+      "image": "717244548768.dkr.ecr.ap-south-1.amazonaws.com/inspira-grid-frontend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "NEXT_PUBLIC_API_URL",
+          "value": "/api"
+        },
+        {
+          "name": "NEXT_PUBLIC_FIREBASE_API_KEY",
+          "value": "AIzaSyDT960YVCmsPyKDaj47k586y9K6DCkKZyo"
+        },
+        {
+          "name": "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+          "value": "inspira-grid-c2e1a.firebaseapp.com"
+        },
+        {
+          "name": "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+          "value": "inspira-grid-c2e1a"
+        },
+        {
+          "name": "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+          "value": "inspira-grid-c2e1a.firebasestorage.app"
+        },
+        {
+          "name": "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+          "value": "210611264492"
+        },
+        {
+          "name": "NEXT_PUBLIC_FIREBASE_APP_ID",
+          "value": "1:210611264492:web:f63a6c7c7c26526ff97ec9"
+        },
+        {
+          "name": "PUSHER_APP_ID",
+          "value": "2068058"
+        },
+        {
+          "name": "NEXT_PUBLIC_PUSHER_KEY",
+          "value": "0e008b4f798e236d3a63"
+        },
+        {
+          "name": "PUSHER_SECRET",
+          "value": "009f230c41b2e56a770f"
+        },
+        {
+          "name": "NEXT_PUBLIC_PUSHER_CLUSTER",
+          "value": "ap2"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/inspira-grid-frontend",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

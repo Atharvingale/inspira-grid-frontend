@@ -1,0 +1,49 @@
+{
+  "ServiceName": "inspira-grid-frontend",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "717244548768.dkr.ecr.ap-south-1.amazonaws.com/inspira-grid-frontend:latest",
+      "ImageRepositoryType": "ECR",
+      "ImageConfiguration": {
+        "Port": "3000",
+        "RuntimeEnvironmentVariables": {
+          "NODE_ENV": "production",
+          "NEXT_PUBLIC_API_URL": "/api",
+          "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyDT960YVCmsPyKDaj47k586y9K6DCkKZyo",
+          "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "inspira-grid-c2e1a.firebaseapp.com",
+          "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "inspira-grid-c2e1a",
+          "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "inspira-grid-c2e1a.firebasestorage.app",
+          "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "210611264492",
+          "NEXT_PUBLIC_FIREBASE_APP_ID": "1:210611264492:web:f63a6c7c7c26526ff97ec9",
+          "NEXT_PUBLIC_USE_EMULATOR": "false",
+          "NEXT_PUBLIC_AUTH_COOKIE_NAME": "auth_token",
+          "NEXTAUTH_SECRET": "change-this-nextauth-secret-in-production",
+          "PUSHER_APP_ID": "2068058",
+          "NEXT_PUBLIC_PUSHER_KEY": "0e008b4f798e236d3a63",
+          "PUSHER_SECRET": "009f230c41b2e56a770f",
+          "NEXT_PUBLIC_PUSHER_CLUSTER": "ap2",
+          "NEXT_PUBLIC_ENABLE_REAL_TIME": "false",
+          "NEXT_PUBLIC_DISABLE_SOCKET": "true",
+          "NEXT_PUBLIC_ENABLE_ANALYTICS": "true",
+          "NEXT_PUBLIC_APP_ENV": "production"
+        }
+      }
+    },
+    "AutoDeploymentsEnabled": false,
+    "AuthenticationConfiguration": {
+      "AccessRoleArn": "arn:aws:iam::717244548768:role/AppRunnerECRAccessRole"
+    }
+  },
+  "InstanceConfiguration": {
+    "Cpu": "1 vCPU",
+    "Memory": "2 GB"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
