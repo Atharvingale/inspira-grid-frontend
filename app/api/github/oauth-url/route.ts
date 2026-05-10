@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 
 // GET /api/github/oauth-url
-export const GET = withAuth(async (_request: NextRequest, _user) => {
-  const user = _user;
+export const GET = withAuth(async (_request: NextRequest, user) => {
   try {
     const clientId = process.env.GITHUB_CLIENT_ID;
     
@@ -32,10 +31,11 @@ export const GET = withAuth(async (_request: NextRequest, _user) => {
         message: 'Redirect to GitHub OAuth'
       }
     });
-  } catch (error: any) {
-    console.error('Error generating GitHub OAuth URL:', error);
+  } catch (error) {
+    console.error('[github/oauth-url/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to generate OAuth URL', message: error.message },
+      { success: false, error: 'Failed to generate OAuth URL', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

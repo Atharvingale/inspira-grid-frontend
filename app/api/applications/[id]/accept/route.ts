@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // PATCH /api/applications/:id/accept
-export const PATCH = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const PATCH = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
     
     const params = await context.params;
     const { id } = params;
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
+    }
     const { role, welcomeMessage } = body;
 
     // Get application
@@ -24,6 +29,10 @@ export const PATCH = withAuth(async (request: NextRequest, _user, context: { par
     }
 
     const applicationData = applicationDoc.data();
+
+    if (!applicationData?.projectId) {
+      return NextResponse.json({ success: false, error: 'Application has no associated project' }, { status: 400 });
+    }
 
     // Get project to verify ownership
     const projectDoc = await db.collection('projects').doc(applicationData?.projectId).get();
@@ -44,10 +53,19 @@ export const PATCH = withAuth(async (request: NextRequest, _user, context: { par
       );
     }
 
-    const { FieldValue } = await import('firebase-admin/firestore');
+    if (applicationData.status !== 'pending') {
+      return NextResponse.json(
+        { success: false, error: `Application is already ${applicationData.status}` },
+        { status: 409 }
+      );
+    }
+
+    // Use a batch write for atomicity
+    const batch = db.batch();
     
     // Update application
-    await db.collection('applications').doc(id).update({
+    const appRef = db.collection('applications').doc(id);
+    batch.update(appRef, {
       status: 'accepted',
       reviewMessage: welcomeMessage || 'Your application has been accepted!',
       reviewedBy: user.uid,
@@ -56,19 +74,19 @@ export const PATCH = withAuth(async (request: NextRequest, _user, context: { par
     });
 
     // Add user to project team
-    const currentTeam = projectData?.team || [];
-    currentTeam.push({
-      userId: applicationData?.applicantId,
-      name: applicationData?.applicantName,
-      email: applicationData?.applicantEmail,
-      role: role || 'member',
-      joinedAt: FieldValue.serverTimestamp()
-    });
-
-    await db.collection('projects').doc(applicationData?.projectId).update({
-      team: currentTeam,
+    const projectRef = db.collection('projects').doc(applicationData.projectId);
+    batch.update(projectRef, {
+      team: FieldValue.arrayUnion({
+        userId: applicationData?.applicantId,
+        name: applicationData?.applicantName,
+        email: applicationData?.applicantEmail,
+        role: role || 'member',
+        joinedAt: new Date().toISOString()
+      }),
       updatedAt: FieldValue.serverTimestamp()
     });
+
+    await batch.commit();
 
     const updatedApplication = await db.collection('applications').doc(id).get();
 
@@ -79,10 +97,11 @@ export const PATCH = withAuth(async (request: NextRequest, _user, context: { par
         ...updatedApplication.data()
       }
     });
-  } catch (error: any) {
-    console.error('Error accepting application:', error);
+  } catch (error) {
+    console.error('[applications/[id]/accept/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to accept application', message: error.message },
+      { success: false, error: 'Failed to accept application', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

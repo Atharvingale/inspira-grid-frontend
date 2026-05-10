@@ -35,13 +35,14 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
       success: true,
       data: notification
     });
-  } catch (error: any) {
-    console.error('Error fetching notification:', error);
+  } catch (error) {
+    console.error('[notifications/[id]/route.ts]', error);
+
     return NextResponse.json(
       {
         success: false,
         message: 'Error fetching notification',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );
@@ -82,13 +83,14 @@ export const DELETE = withAuth(async (request: NextRequest, user, context: { par
       success: true,
       message: 'Notification deleted successfully'
     });
-  } catch (error: any) {
-    console.error('Error deleting notification:', error);
+  } catch (error) {
+    console.error('[notifications/[id]/route.ts]', error);
+
     return NextResponse.json(
       {
         success: false,
         message: 'Error deleting notification',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );

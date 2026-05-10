@@ -58,10 +58,11 @@ export async function GET(request: NextRequest) {
         hasPrev: startIndex > 0
       }
     });
-  } catch (error: any) {
-    console.error('Error searching projects:', error);
+  } catch (error) {
+    console.error('[projects/search/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to search projects', message: error.message },
+      { error: 'Failed to search projects', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

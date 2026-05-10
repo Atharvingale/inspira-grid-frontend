@@ -111,10 +111,11 @@ export const PATCH = withAuth(async (request: NextRequest, user, context: { para
         ...updatedChangeRequest.data()
       }
     });
-  } catch (error: any) {
-    console.error('Error reviewing change request:', error);
+  } catch (error) {
+    console.error('[change-requests/[id]/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to review change request', message: error.message },
+      { success: false, error: 'Failed to review change request', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -161,10 +162,11 @@ export const DELETE = withAuth(async (request: NextRequest, user, context: { par
       success: true,
       message: 'Change request deleted successfully'
     });
-  } catch (error: any) {
-    console.error('Error deleting change request:', error);
+  } catch (error) {
+    console.error('[change-requests/[id]/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to delete change request', message: error.message },
+      { success: false, error: 'Failed to delete change request', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

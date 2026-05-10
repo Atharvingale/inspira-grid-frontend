@@ -42,6 +42,7 @@ export const useMessaging = (): UseMessagingReturn => {
   // Refs for cleanup
   const typingTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const messageCache = useRef<Map<string, EnhancedMessage[]>>(new Map());
+  const currentConversationRef = useRef<Conversation | undefined>(undefined);
 
   // =====================================
   // Socket Event Handlers
@@ -71,7 +72,7 @@ export const useMessaging = (): UseMessagingReturn => {
       ));
 
       // Add message to current conversation if it matches
-      if (currentConversation && message.conversationId === currentConversation.id) {
+      if (currentConversationRef.current && message.conversationId === currentConversationRef.current.id) {
         setMessages(prev => {
           const exists = prev.some(msg => msg.id === message.id);
           if (exists) return prev;
@@ -88,7 +89,7 @@ export const useMessaging = (): UseMessagingReturn => {
 
       // Show notification for messages not from current user
       if (message.senderId !== currentUser.uid && 
-          (!currentConversation || message.conversationId !== currentConversation.id)) {
+          (!currentConversationRef.current || message.conversationId !== currentConversationRef.current.id)) {
         toast.info(`New message from ${message.senderName}`, {
           onClick: () => selectConversation(message.conversationId)
         });
@@ -163,7 +164,7 @@ export const useMessaging = (): UseMessagingReturn => {
         conv.id === conversationId ? { ...conv, ...updates } : conv
       ));
       
-      if (currentConversation?.id === conversationId) {
+      if (currentConversationRef.current?.id === conversationId) {
         setCurrentConversation(prev => prev ? { ...prev, ...updates } : prev);
       }
     };
@@ -197,7 +198,7 @@ export const useMessaging = (): UseMessagingReturn => {
       timeouts.forEach(timeout => clearTimeout(timeout));
       timeouts.clear();
     };
-  }, [socket?.socket, currentUser, currentConversation]);
+  }, [socket?.socket, currentUser]);
 
   // =====================================
   // Data Loading
@@ -276,6 +277,7 @@ export const useMessaging = (): UseMessagingReturn => {
     const conversation = conversations.find(c => c.id === conversationId);
     if (!conversation) return;
 
+    currentConversationRef.current = conversation;
     setCurrentConversation(conversation);
     await loadMessages(conversationId);
 
@@ -299,12 +301,14 @@ export const useMessaging = (): UseMessagingReturn => {
   const sendMessage = useCallback(async (request: SendMessageRequest): Promise<void> => {
     if (!currentUser || loading.sending) return;
 
+    const tempId = `temp-${Date.now()}`;
+
     try {
       setLoading(prev => ({ ...prev, sending: true }));
 
       // Create optimistic message
       const optimisticMessage: EnhancedMessage = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         conversationId: request.conversationId,
         senderId: currentUser.uid,
         senderName: currentUser.displayName || currentUser.email || 'You',
@@ -346,7 +350,7 @@ export const useMessaging = (): UseMessagingReturn => {
       
       // Remove optimistic message on error
       if (currentConversation?.id === request.conversationId) {
-        setMessages(prev => prev.filter(msg => msg.id !== `temp-${Date.now()}`));
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
       }
     } finally {
       setLoading(prev => ({ ...prev, sending: false }));

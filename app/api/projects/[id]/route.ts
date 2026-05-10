@@ -25,15 +25,15 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     }
 
     return NextResponse.json(project);
-  } catch (error: any) {
-    console.error('Error fetching project:', error);
-    return NextResponse.json({ error: 'Failed to fetch project', message: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[projects/[id]/route.ts]', error);
+
+    return NextResponse.json({ error: 'Failed to fetch project', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' }, { status: 500 });
   }
 }
 
 // PUT /api/projects/[id]
-export const PUT = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const PUT = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const { id } = params;
@@ -63,15 +63,15 @@ export const PUT = withAuth(async (request: NextRequest, _user, context: { param
       message: 'Project updated successfully',
       project: updatedProject
     });
-  } catch (error: any) {
-    console.error('Error updating project:', error);
-    return NextResponse.json({ error: 'Failed to update project', message: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[projects/[id]/route.ts]', error);
+
+    return NextResponse.json({ error: 'Failed to update project', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' }, { status: 500 });
   }
 });
 
 // DELETE /api/projects/[id]
-export const DELETE = withAuth(async (_request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const DELETE = withAuth(async (_request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const { id } = params;
@@ -88,8 +88,9 @@ export const DELETE = withAuth(async (_request: NextRequest, _user, context: { p
     await ProjectModel.delete(id);
     
     return NextResponse.json({ message: 'Project deleted successfully' });
-  } catch (error: any) {
-    console.error('Error deleting project:', error);
-    return NextResponse.json({ error: 'Failed to delete project', message: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[projects/[id]/route.ts]', error);
+
+    return NextResponse.json({ error: 'Failed to delete project', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' }, { status: 500 });
   }
 });

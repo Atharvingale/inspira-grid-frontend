@@ -71,10 +71,11 @@ export async function POST(request: NextRequest) {
       success: true,
       ...uploadResponse
     });
-  } catch (error: any) {
-    console.error('Error uploading file:', error);
+  } catch (error) {
+    console.error('[upload/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to upload file', message: error.message },
+      { error: 'Failed to upload file', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

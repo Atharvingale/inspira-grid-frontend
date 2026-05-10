@@ -38,10 +38,11 @@ export const DELETE = withAuth(async (request: NextRequest, user, context: { par
     return NextResponse.json({ 
       message: 'Team member removed successfully'
     });
-  } catch (error: any) {
-    console.error('Error removing team member:', error);
+  } catch (error) {
+    console.error('[projects/[id]/team/[memberId]/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to remove team member', message: error.message },
+      { error: 'Failed to remove team member', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -104,10 +105,11 @@ export const PATCH = withAuth(async (request: NextRequest, user, context: { para
       message: 'Team member role updated successfully',
       teamMember
     });
-  } catch (error: any) {
-    console.error('Error updating team member:', error);
+  } catch (error) {
+    console.error('[projects/[id]/team/[memberId]/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to update team member', message: error.message },
+      { error: 'Failed to update team member', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

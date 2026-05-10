@@ -95,13 +95,13 @@ export async function GET(request: NextRequest) {
         'X-Accel-Buffering': 'no', // Disable buffering for Nginx
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error setting up notification stream:', error);
     return new Response(
       JSON.stringify({
         success: false,
         message: 'Error setting up notification stream',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       }),
       {
         status: 500,

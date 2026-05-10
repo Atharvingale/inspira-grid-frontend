@@ -70,15 +70,17 @@ export const POST = withCompleteProfile(async (request: NextRequest, user, conte
         }
       });
     } catch (notificationError) {
-      console.error('Error creating application notification:', notificationError);
-    }
+    console.error('[projects/[id]/apply/route.ts]', notificationError);
+
+      }
     
     return NextResponse.json({
       message: 'Application submitted successfully',
       application
     }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error applying to project:', error);
-    return NextResponse.json({ error: 'Failed to apply to project', message: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[projects/[id]/apply/route.ts]', error);
+
+    return NextResponse.json({ error: 'Failed to apply to project', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' }, { status: 500 });
   }
 });

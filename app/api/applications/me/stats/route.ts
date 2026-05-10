@@ -38,10 +38,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       successRate,
       averageResponseTime
     });
-  } catch (error: any) {
-    console.error('Error fetching application stats:', error);
+  } catch (error) {
+    console.error('[applications/me/stats/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch application statistics', message: error.message },
+      { error: 'Failed to fetch application statistics', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

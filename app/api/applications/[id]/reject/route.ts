@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // PATCH /api/applications/:id/reject
-export const PATCH = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const PATCH = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     initAdmin();
     const db = getFirestore();
@@ -44,8 +44,6 @@ export const PATCH = withAuth(async (request: NextRequest, _user, context: { par
       );
     }
 
-    const { FieldValue } = await import('firebase-admin/firestore');
-    
     // Update application
     await db.collection('applications').doc(id).update({
       status: 'rejected',
@@ -64,10 +62,11 @@ export const PATCH = withAuth(async (request: NextRequest, _user, context: { par
         ...updatedApplication.data()
       }
     });
-  } catch (error: any) {
-    console.error('Error rejecting application:', error);
+  } catch (error) {
+    console.error('[applications/[id]/reject/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to reject application', message: error.message },
+      { success: false, error: 'Failed to reject application', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

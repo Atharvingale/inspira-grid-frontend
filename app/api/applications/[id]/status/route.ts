@@ -5,8 +5,7 @@ import ProjectModel from '@/lib/models/Project';
 import NotificationModel from '@/lib/models/Notification';
 
 // PATCH /api/applications/[id]/status
-export const PATCH = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const PATCH = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const { id } = params;
@@ -65,17 +64,18 @@ export const PATCH = withAuth(async (request: NextRequest, _user, context: { par
         }
       });
     } catch (_notificationError) {
-      console.error('Error creating application status notification:', _notificationError);
+    console.error('Error creating application status notification:', _notificationError);
     }
 
     return NextResponse.json({
       message: `Application ${body.status} successfully`,
       application: updatedApplication
     });
-  } catch (error: any) {
-    console.error('Error updating application status:', error);
+  } catch (error) {
+    console.error('[applications/[id]/status/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to update application status', message: error.message },
+      { error: 'Failed to update application status', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

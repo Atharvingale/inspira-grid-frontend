@@ -64,10 +64,11 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
       success: true,
       data: issues
     });
-  } catch (error: any) {
-    console.error('Error fetching repository issues:', error);
+  } catch (error) {
+    console.error('[github/repositories/[owner]/[repo]/issues/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch issues', message: error.message },
+      { success: false, error: 'Failed to fetch issues', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

@@ -48,10 +48,11 @@ export async function GET(request: NextRequest) {
       .slice(0, limit);
 
     return NextResponse.json({ projects: featuredProjects });
-  } catch (error: any) {
-    console.error('Error fetching featured projects:', error);
+  } catch (error) {
+    console.error('[projects/featured/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch featured projects', message: error.message },
+      { error: 'Failed to fetch featured projects', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

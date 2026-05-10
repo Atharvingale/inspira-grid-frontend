@@ -11,13 +11,14 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       success: true,
       data: result
     });
-  } catch (error: any) {
-    console.error('Error getting unread count:', error);
+  } catch (error) {
+    console.error('[notifications/count/unread/route.ts]', error);
+
     return NextResponse.json(
       {
         success: false,
         message: 'Error getting unread count',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );

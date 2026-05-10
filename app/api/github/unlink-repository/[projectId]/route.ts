@@ -54,10 +54,11 @@ export const DELETE = withAuth(async (request: NextRequest, user, context: { par
         }
       }
     });
-  } catch (error: any) {
-    console.error('Error unlinking repository:', error);
+  } catch (error) {
+    console.error('[github/unlink-repository/[projectId]/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to unlink repository', message: error.message },
+      { success: false, error: 'Failed to unlink repository', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

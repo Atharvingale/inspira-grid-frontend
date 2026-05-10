@@ -48,10 +48,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         connectedAt: githubData.connectedAt || null
       }
     });
-  } catch (error: any) {
-    console.error('Error fetching GitHub profile:', error);
+  } catch (error) {
+    console.error('[github/profile/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch GitHub profile', message: error.message },
+      { success: false, error: 'Failed to fetch GitHub profile', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

@@ -32,13 +32,14 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       data: notifications,
       count: notifications.length
     });
-  } catch (error: any) {
-    console.error('Error fetching notifications:', error);
+  } catch (error) {
+    console.error('[notifications/route.ts]', error);
+
     return NextResponse.json(
       {
         success: false,
         message: 'Error fetching notifications',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );

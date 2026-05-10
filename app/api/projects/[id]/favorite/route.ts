@@ -29,10 +29,11 @@ export const POST = withAuth(async (request: NextRequest, user, context: { param
       });
       return NextResponse.json({ isFavorite: true });
     }
-  } catch (error: any) {
-    console.error('Error toggling favorite:', error);
+  } catch (error) {
+    console.error('[projects/[id]/favorite/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to toggle favorite', message: error.message },
+      { error: 'Failed to toggle favorite', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

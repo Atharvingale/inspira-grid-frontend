@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // POST /api/applications - Create new application
-export const POST = withAuth(async (request: NextRequest, _user) => {
-  const user = _user;
+export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     initAdmin();
     const db = getFirestore();
@@ -43,8 +43,6 @@ export const POST = withAuth(async (request: NextRequest, _user) => {
       );
     }
 
-    const { FieldValue } = await import('firebase-admin/firestore');
-    
     // Create application
     const applicationData = {
       projectId,
@@ -72,10 +70,11 @@ export const POST = withAuth(async (request: NextRequest, _user) => {
         ...newApplication.data()
       }
     }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating application:', error);
+  } catch (error) {
+    console.error('[applications/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to create application', message: error.message },
+      { success: false, error: 'Failed to create application', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

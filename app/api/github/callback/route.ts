@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // GET /api/github/callback
 export async function GET(request: NextRequest) {
@@ -74,8 +75,6 @@ export async function GET(request: NextRequest) {
     // Save GitHub data to Firestore
     initAdmin();
     const db = getFirestore();
-    const { FieldValue } = await import('firebase-admin/firestore');
-    
     await db.collection('users').doc(userId).update({
       githubProfile: {
         id: githubUser.id.toString(),

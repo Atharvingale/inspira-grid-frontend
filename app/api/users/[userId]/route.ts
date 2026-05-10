@@ -33,10 +33,11 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
     };
     
     return NextResponse.json(publicProfile);
-  } catch (error: any) {
-    console.error('Error fetching user profile:', error);
+  } catch (error) {
+    console.error('[users/[userId]/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch user profile', message: error.message },
+      { error: 'Failed to fetch user profile', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

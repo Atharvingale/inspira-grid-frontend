@@ -43,10 +43,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       projectsCompleted,
       skillsCount
     });
-  } catch (error: any) {
-    console.error('Error fetching user stats:', error);
+  } catch (error) {
+    console.error('[users/me/stats/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch user statistics', message: error.message },
+      { error: 'Failed to fetch user statistics', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

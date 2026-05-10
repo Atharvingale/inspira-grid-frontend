@@ -37,13 +37,14 @@ export const PATCH = withAuth(async (request: NextRequest, user, context: { para
       message: 'Notification marked as read',
       data: updatedNotification
     });
-  } catch (error: any) {
-    console.error('Error marking notification as read:', error);
+  } catch (error) {
+    console.error('[notifications/[id]/read/route.ts]', error);
+
     return NextResponse.json(
       {
         success: false,
         message: 'Error marking notification as read',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );

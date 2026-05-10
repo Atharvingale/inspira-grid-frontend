@@ -81,10 +81,11 @@ export async function GET(request: NextRequest) {
       success: true,
       conversations
     });
-  } catch (error: any) {
-    console.error('Error fetching conversations:', error);
+  } catch (error) {
+    console.error('[conversations/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch conversations', message: error.message },
+      { error: 'Failed to fetch conversations', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -211,10 +212,11 @@ export async function POST(request: NextRequest) {
       success: true,
       conversation
     });
-  } catch (error: any) {
-    console.error('Error creating conversation:', error);
+  } catch (error) {
+    console.error('[conversations/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to create conversation', message: error.message },
+      { error: 'Failed to create conversation', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
