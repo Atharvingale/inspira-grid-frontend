@@ -12,6 +12,7 @@ interface MessageBubbleProps {
   showAvatar?: boolean;
   onAddReaction?: (emoji: string) => void;
   onRemoveReaction?: (emoji: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
   conversationType?: 'direct' | 'group' | 'project_group';
   otherParticipantId?: string; // For direct chats only
 }
@@ -22,6 +23,7 @@ export function MessageBubble({
   showAvatar = true,
   onAddReaction,
   onRemoveReaction,
+  onDeleteMessage,
   conversationType,
   otherParticipantId
 }: MessageBubbleProps) {
@@ -35,7 +37,19 @@ export function MessageBubble({
                  otherParticipantId && 
                  message.readBy?.includes(otherParticipantId);
 
+
+  if (message.isDeleted) {
+    return (
+      <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group mb-2`}>
+        <div className={`px-4 py-2 rounded-2xl border border-slate-700 text-slate-500 italic text-sm ${isCurrentUser ? 'ml-auto' : ''}`}>
+          This message was unsent
+        </div>
+      </div>
+    );
+  }
+
   return (
+
     <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group animate-fadeIn`}>
       {!isCurrentUser && showAvatar && (
         <Avatar className="w-10 h-10 mr-3 mt-1 ring-2 ring-slate-800/50">
@@ -54,8 +68,8 @@ export function MessageBubble({
         <div
           className={`relative px-4 py-3 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${
             isCurrentUser
-              ? 'bg-gradient-to-br from-brand-primary to-brand-secondary text-white rounded-br-sm'
-              : 'bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 text-white rounded-bl-sm'
+              ? 'bg-blue-600 text-white rounded-br-sm'
+              : 'bg-slate-800 text-white rounded-bl-sm border-none'
           }`}
         >
           {message.replyTo && (
@@ -143,9 +157,10 @@ export function MessageBubble({
           </div>
         )}
         
+
         {/* Quick reactions on hover */}
-        <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute -top-8 right-0 bg-slate-800/90 backdrop-blur-xl border border-slate-700/50 rounded-full px-3 py-2 shadow-xl">
-          <div className="flex space-x-1.5">
+        <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute -top-8 right-0 bg-slate-800/90 backdrop-blur-xl border border-slate-700/50 rounded-full px-3 py-2 shadow-xl flex items-center gap-2">
+          <div className="flex space-x-1.5 border-r border-slate-700 pr-2">
             {['👍', '❤️', '😂', '😮', '😢', '😡'].map((emoji) => (
               <button
                 key={emoji}
@@ -156,7 +171,20 @@ export function MessageBubble({
               </button>
             ))}
           </div>
+          {isCurrentUser && (
+            <button
+              className="text-xs text-red-400 hover:text-red-300 font-medium px-2"
+              onClick={() => {
+                if (onDeleteMessage) {
+                  onDeleteMessage(message.id);
+                }
+              }}
+            >
+              Unsend
+            </button>
+          )}
         </div>
+
       </div>
       
       {isCurrentUser && showAvatar && (

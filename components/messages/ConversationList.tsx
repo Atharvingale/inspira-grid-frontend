@@ -70,17 +70,17 @@ export function ConversationList({
   });
 
   return (
-    <div className="w-1/3 bg-slate-900/60 backdrop-blur-xl border-r border-slate-800/50 flex flex-col">
+    <div className="w-1/3 bg-black border-r border-slate-800 flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-slate-800/50">
+      <div className="p-6 border-b border-slate-800">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Messages</h1>
-            <p className="text-sm text-slate-400 mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+            <h1 className="text-xl font-bold text-white flex items-center">Messages <svg className="w-5 h-5 ml-2 mt-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></h1>
+
           </div>
           <button
             onClick={onNewConversation}
-            className="p-2.5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl hover:shadow-lg hover:shadow-brand-primary/30 hover:scale-110 transition-all duration-300"
+            className="p-2 text-white hover:bg-slate-800 rounded-lg transition-all"
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -93,7 +93,7 @@ export function ConversationList({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder:text-slate-500 focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary focus:bg-slate-800/70 transition-all"
+            className="w-full pl-11 pr-4 py-2 bg-slate-900 border-none rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-0 transition-all"
           />
         </div>
       </div>
@@ -126,14 +126,14 @@ export function ConversationList({
                 onClick={() => onConversationSelect(conversation)}
                 className={`group relative p-4 cursor-pointer transition-all duration-300 ${
                   isActive 
-                    ? 'bg-gradient-to-r from-brand-primary/20 to-brand-secondary/10 border-l-4 border-brand-primary' 
-                    : 'hover:bg-slate-800/30 border-l-4 border-transparent hover:border-slate-700'
+                    ? 'bg-slate-900 border-l-4 border-transparent'
+                    : 'hover:bg-slate-900/50 border-l-4 border-transparent'
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <div className="relative flex-shrink-0">
                     {conversation.type === 'direct' ? (
-                      <Avatar className="w-14 h-14 ring-2 ring-slate-800/50 group-hover:ring-brand-primary/30 transition-all">
+                      <Avatar className="w-14 h-14">
                         <AvatarImage src={avatar.src} />
                         <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-800 text-white font-semibold">
                           {avatar.fallback}
@@ -179,7 +179,7 @@ export function ConversationList({
                       </p>
                       
                       {conversation.unreadCount > 0 && (
-                        <div className="bg-gradient-to-r from-brand-primary to-brand-secondary text-white text-xs font-bold px-2.5 py-1 rounded-full min-w-[24px] flex items-center justify-center shadow-lg animate-pulse">
+                        <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] flex items-center justify-center">
                           {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
                         </div>
                       )}

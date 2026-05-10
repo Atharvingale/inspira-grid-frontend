@@ -18,6 +18,7 @@ const Messages = () => {
     setActiveConversation,
     sendMessage,
     sendFile,
+    deleteMessage,
     addReaction,
     removeReaction,
     startTyping,
@@ -139,7 +140,7 @@ const Messages = () => {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex overflow-hidden">
+    <div className="h-screen bg-black flex overflow-hidden">
       <ConversationList
         conversations={state.conversations}
         activeConversation={state.activeConversation}
@@ -156,7 +157,7 @@ const Messages = () => {
         {state.activeConversation ? (
           <>
             {/* Chat Header */}
-            <div className="relative z-10 px-6 py-4 bg-slate-900/60 backdrop-blur-xl border-b border-slate-800/50">
+            <div className="relative z-10 px-6 py-4 bg-black border-b border-slate-800">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white font-semibold shadow-lg">
@@ -193,7 +194,7 @@ const Messages = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-gradient-to-b from-transparent via-slate-950/30 to-transparent">
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-black">
               {(state.messages[state.activeConversation.id] || []).length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center space-y-4">
@@ -225,6 +226,15 @@ const Messages = () => {
                       isCurrentUser={message.senderId === currentUser?.uid}
                       onAddReaction={(emoji) => handleAddReaction(message.id, emoji)}
                       onRemoveReaction={(emoji) => handleRemoveReaction(message.id, emoji)}
+                      onDeleteMessage={async (messageId) => {
+                        if (state.activeConversation) {
+                          try {
+                            await deleteMessage(state.activeConversation.id, messageId);
+                          } catch (error) {
+                            console.error('Failed to unsend message:', error);
+                          }
+                        }
+                      }}
                       conversationType={state.activeConversation?.type}
                       otherParticipantId={otherParticipant?.id}
                     />
@@ -256,7 +266,7 @@ const Messages = () => {
             )}
 
             {/* Message Input */}
-            <div className="relative z-10 px-6 py-4 bg-slate-900/60 backdrop-blur-xl border-t border-slate-800/50">
+            <div className="relative z-10 px-6 py-4 bg-black border-t border-slate-800">
               <form onSubmit={handleSendMessage} className="flex items-end space-x-3">
                 {/* File Upload Button */}
                 <button
@@ -277,35 +287,28 @@ const Messages = () => {
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     placeholder="Type a message..."
-                    className="w-full px-5 py-3.5 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white placeholder:text-slate-500 focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary focus:bg-slate-800/70 transition-all backdrop-blur-sm"
+                    className="w-full px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-full text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-700 transition-all"
                     disabled={sendingMessage}
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={sendingMessage || !newMessage.trim()}
-                  className="group relative px-5 py-3.5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-2xl hover:shadow-xl hover:shadow-brand-primary/40 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300"
-                >
-                  {sendingMessage ? (
-                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                  )}
-                </button>
+                {newMessage.trim() && (
+                  <button
+                    type="submit"
+                    disabled={sendingMessage}
+                    className="font-semibold text-blue-500 hover:text-white transition-colors px-2"
+                  >
+                    Send
+                  </button>
+                )}
               </form>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-950/50 to-slate-900/30">
+          <div className="flex-1 flex items-center justify-center bg-black">
             <div className="text-center space-y-8 max-w-md px-6">
               <div className="relative w-32 h-32 mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full opacity-20 blur-2xl animate-pulse"></div>
+                <div className=""></div>
                 <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl rounded-full flex items-center justify-center border-2 border-slate-800/50">
                   <svg className="w-16 h-16 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

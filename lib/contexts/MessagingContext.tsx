@@ -189,8 +189,10 @@ function messagingReducer(state: MessagingState, action: MessagingAction): Messa
         ...state,
         messages: {
           ...state.messages,
-          [action.payload.conversationId]: (state.messages[action.payload.conversationId] || []).filter(
-            msg => msg.id !== action.payload.messageId
+          [action.payload.conversationId]: (state.messages[action.payload.conversationId] || []).map(msg =>
+            msg.id === action.payload.messageId
+              ? { ...msg, isDeleted: true, content: 'Message unsent' }
+              : msg
           ),
         },
       };
