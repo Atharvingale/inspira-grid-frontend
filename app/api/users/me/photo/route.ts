@@ -53,10 +53,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       photoURL,
       message: 'Profile picture uploaded successfully'
     });
-  } catch (error: any) {
-    console.error('Error uploading profile picture:', error);
+  } catch (error) {
+    console.error('[users/me/photo/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to upload profile picture', message: error.message },
+      { error: 'Failed to upload profile picture', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

@@ -22,10 +22,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         message: 'GitHub account disconnected successfully'
       }
     });
-  } catch (error: any) {
-    console.error('Error disconnecting GitHub:', error);
+  } catch (error) {
+    console.error('[github/disconnect/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to disconnect GitHub account', message: error.message },
+      { success: false, error: 'Failed to disconnect GitHub account', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

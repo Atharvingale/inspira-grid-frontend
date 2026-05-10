@@ -68,7 +68,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         createdAt: new Date().toISOString(),
       });
     } catch (pusherError) {
-      console.error('Pusher event failed:', pusherError);
+    console.error('[messages/send/route.ts]', pusherError);
+
       // Don't fail the request if Pusher fails
     }
 
@@ -79,10 +80,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         createdAt: new Date().toISOString(),
       },
     }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error sending message:', error);
+  } catch (error) {
+    console.error('[messages/send/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to send message', message: error.message },
+      { error: 'Failed to send message', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

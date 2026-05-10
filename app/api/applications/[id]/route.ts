@@ -4,8 +4,7 @@ import ApplicationModel from '@/lib/models/Application';
 import ProjectModel from '@/lib/models/Project';
 
 // GET /api/applications/[id]
-export const GET = withAuth(async (_request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const GET = withAuth(async (_request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const { id } = params;
@@ -39,15 +38,15 @@ export const GET = withAuth(async (_request: NextRequest, _user, context: { para
         ownerName: project.ownerName
       }
     });
-  } catch (error: any) {
-    console.error('Error fetching application:', error);
-    return NextResponse.json({ error: 'Failed to fetch application', message: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[applications/[id]/route.ts]', error);
+
+    return NextResponse.json({ error: 'Failed to fetch application', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' }, { status: 500 });
   }
 });
 
 // PUT /api/applications/[id] - Update application
-export const PUT = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const PUT = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const { id } = params;
@@ -81,15 +80,15 @@ export const PUT = withAuth(async (request: NextRequest, _user, context: { param
     const updatedApplication = await ApplicationModel.getById(id);
     
     return NextResponse.json(updatedApplication);
-  } catch (error: any) {
-    console.error('Error updating application:', error);
-    return NextResponse.json({ error: 'Failed to update application', message: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[applications/[id]/route.ts]', error);
+
+    return NextResponse.json({ error: 'Failed to update application', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' }, { status: 500 });
   }
 });
 
 // DELETE /api/applications/[id]
-export const DELETE = withAuth(async (_request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const DELETE = withAuth(async (_request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const { id } = params;
@@ -116,8 +115,9 @@ export const DELETE = withAuth(async (_request: NextRequest, _user, context: { p
     await ApplicationModel.delete(id);
     
     return NextResponse.json({ message: 'Application withdrawn successfully' });
-  } catch (error: any) {
-    console.error('Error withdrawing application:', error);
-    return NextResponse.json({ error: 'Failed to withdraw application', message: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[applications/[id]/route.ts]', error);
+
+    return NextResponse.json({ error: 'Failed to withdraw application', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' }, { status: 500 });
   }
 });

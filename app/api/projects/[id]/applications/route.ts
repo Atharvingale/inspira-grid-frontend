@@ -50,10 +50,11 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
       success: true,
       data: applications
     });
-  } catch (error: any) {
-    console.error('Error fetching project applications:', error);
+  } catch (error) {
+    console.error('[projects/[id]/applications/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch applications', message: error.message },
+      { success: false, error: 'Failed to fetch applications', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

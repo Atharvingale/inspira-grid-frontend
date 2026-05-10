@@ -64,12 +64,13 @@ export async function GET(request: NextRequest) {
         hasPrev: startIndex > 0
       }
     });
-  } catch (error: any) {
-    console.error('Error fetching projects:', error);
+  } catch (error) {
+    console.error('[projects/route.ts]', error);
+
     return NextResponse.json(
       {
         error: 'Failed to fetch projects',
-        message: error.message
+        message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );
@@ -136,12 +137,13 @@ export const POST = withCompleteProfile(async (request: NextRequest, user) => {
       message: 'Project created successfully',
       project
     }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating project:', error);
+  } catch (error) {
+    console.error('[projects/route.ts]', error);
+
     return NextResponse.json(
       {
         error: 'Failed to create project',
-        message: error.message
+        message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );

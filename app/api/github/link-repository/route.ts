@@ -67,10 +67,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         }
       }
     });
-  } catch (error: any) {
-    console.error('Error linking repository:', error);
+  } catch (error) {
+    console.error('[github/link-repository/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to link repository', message: error.message },
+      { success: false, error: 'Failed to link repository', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

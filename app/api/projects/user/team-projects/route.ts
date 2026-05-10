@@ -59,10 +59,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     }
 
     return NextResponse.json({ projects: teamProjects });
-  } catch (error: any) {
-    console.error('Error fetching team projects:', error);
+  } catch (error) {
+    console.error('[projects/user/team-projects/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch team projects', message: error.message },
+      { error: 'Failed to fetch team projects', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

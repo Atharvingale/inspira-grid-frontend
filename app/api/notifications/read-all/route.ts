@@ -12,13 +12,14 @@ export const PATCH = withAuth(async (request: NextRequest, user) => {
       message: `${result.updatedCount} notifications marked as read`,
       data: result
     });
-  } catch (error: any) {
-    console.error('Error marking all notifications as read:', error);
+  } catch (error) {
+    console.error('[notifications/read-all/route.ts]', error);
+
     return NextResponse.json(
       {
         success: false,
         message: 'Error marking all notifications as read',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       },
       { status: 500 }
     );

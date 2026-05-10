@@ -55,10 +55,11 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
       completionPercentage,
       maxTeamSize: project.teamSize
     });
-  } catch (error: any) {
-    console.error('Error fetching project stats:', error);
+  } catch (error) {
+    console.error('[projects/[id]/stats/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch project statistics', message: error.message },
+      { error: 'Failed to fetch project statistics', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

@@ -98,10 +98,11 @@ export const POST = withAuth(async (request: NextRequest, user, context: { param
         ...changeRequest
       }
     });
-  } catch (error: any) {
-    console.error('Error creating change request:', error);
+  } catch (error) {
+    console.error('[projects/[id]/change-requests/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to create change request', message: error.message },
+      { success: false, error: 'Failed to create change request', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -158,10 +159,11 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
       success: true,
       data: changeRequests
     });
-  } catch (error: any) {
-    console.error('Error fetching change requests:', error);
+  } catch (error) {
+    console.error('[projects/[id]/change-requests/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch change requests', message: error.message },
+      { success: false, error: 'Failed to fetch change requests', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

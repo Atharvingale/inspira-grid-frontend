@@ -92,10 +92,11 @@ export async function POST(
       success: true,
       markedAsRead: updatedMessages.length
     });
-  } catch (error: any) {
-    console.error('Error marking messages as read:', error);
+  } catch (error) {
+    console.error('[conversations/[id]/read/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to mark messages as read', message: error.message },
+      { error: 'Failed to mark messages as read', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

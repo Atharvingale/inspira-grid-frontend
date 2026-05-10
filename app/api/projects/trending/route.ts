@@ -81,10 +81,11 @@ export async function GET(request: NextRequest) {
       .slice(0, limit);
 
     return NextResponse.json({ projects: topTrending });
-  } catch (error: any) {
-    console.error('Error fetching trending projects:', error);
+  } catch (error) {
+    console.error('[projects/trending/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch trending projects', message: error.message },
+      { error: 'Failed to fetch trending projects', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

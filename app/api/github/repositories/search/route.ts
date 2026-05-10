@@ -64,10 +64,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       success: true,
       data: searchResults.items || []
     });
-  } catch (error: any) {
-    console.error('Error searching GitHub repositories:', error);
+  } catch (error) {
+    console.error('[github/repositories/search/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to search repositories', message: error.message },
+      { success: false, error: 'Failed to search repositories', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

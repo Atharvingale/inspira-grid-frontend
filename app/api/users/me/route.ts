@@ -45,10 +45,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       updatedAt: userData?.updatedAt?.toDate?.(),
       joinedAt: userData?.joinedAt?.toDate?.()
     });
-  } catch (error: any) {
-    console.error('Error fetching user profile:', error);
+  } catch (error) {
+    console.error('[users/me/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch profile', message: error.message },
+      { error: 'Failed to fetch profile', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -112,10 +113,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         joinedAt: updatedData?.joinedAt?.toDate?.()
       }
     });
-  } catch (error: any) {
-    console.error('Error updating user profile:', error);
+  } catch (error) {
+    console.error('[users/me/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to update profile', message: error.message },
+      { error: 'Failed to update profile', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

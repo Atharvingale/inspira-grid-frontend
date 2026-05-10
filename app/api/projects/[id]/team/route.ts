@@ -3,7 +3,7 @@ import { withAuth } from '@/lib/middleware/auth';
 import ProjectModel from '@/lib/models/Project';
 
 // GET /api/projects/:id/team - Get project team members
-export const GET = withAuth(async (_request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
+export const GET = withAuth(async (_request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const projectId = params.id;
@@ -29,18 +29,18 @@ export const GET = withAuth(async (_request: NextRequest, _user, context: { para
     ];
 
     return NextResponse.json({ teamMembers });
-  } catch (error: any) {
-    console.error('Error fetching team members:', error);
+  } catch (error) {
+    console.error('[projects/[id]/team/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch team members', message: error.message },
+      { error: 'Failed to fetch team members', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
 });
 
 // POST /api/projects/:id/team - Add team member
-export const POST = withAuth(async (request: NextRequest, _user, context: { params: Promise<{ id: string }> }) => {
-  const user = _user;
+export const POST = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
   try {
     const params = await context.params;
     const projectId = params.id;
@@ -90,10 +90,11 @@ export const POST = withAuth(async (request: NextRequest, _user, context: { para
         joinedAt: new Date()
       }
     });
-  } catch (error: any) {
-    console.error('Error adding team member:', error);
+  } catch (error) {
+    console.error('[projects/[id]/team/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to add team member', message: error.message },
+      { error: 'Failed to add team member', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

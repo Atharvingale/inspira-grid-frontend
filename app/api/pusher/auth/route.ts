@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         // For now, we'll decode it client-side in the Pusher config
         userId = 'authenticated-user';
       } catch (error) {
-        console.warn('Could not decode auth token for Pusher:', error);
+    console.warn('Could not decode auth token for Pusher:', error);
       }
     }
 
@@ -49,10 +49,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(authResponse);
-  } catch (error: any) {
-    console.error('Pusher auth error:', error);
+  } catch (error) {
+    console.error('[pusher/auth/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Authentication failed', message: error.message },
+      { error: 'Authentication failed', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

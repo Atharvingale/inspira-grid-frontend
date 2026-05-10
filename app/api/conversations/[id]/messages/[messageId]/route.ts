@@ -83,10 +83,11 @@ export async function PATCH(
       success: true,
       message
     });
-  } catch (error: any) {
-    console.error('Error updating message:', error);
+  } catch (error) {
+    console.error('[conversations/[id]/messages/[messageId]/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to update message', message: error.message },
+      { error: 'Failed to update message', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -134,10 +135,11 @@ export async function DELETE(
       success: true,
       message
     });
-  } catch (error: any) {
-    console.error('Error deleting message:', error);
+  } catch (error) {
+    console.error('[conversations/[id]/messages/[messageId]/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to delete message', message: error.message },
+      { error: 'Failed to delete message', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

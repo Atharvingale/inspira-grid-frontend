@@ -57,10 +57,11 @@ export async function POST(
     return NextResponse.json({
       success: true
     });
-  } catch (error: any) {
-    console.error('Error updating typing indicator:', error);
+  } catch (error) {
+    console.error('[conversations/[id]/typing/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to update typing indicator', message: error.message },
+      { error: 'Failed to update typing indicator', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

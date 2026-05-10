@@ -55,10 +55,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       success: true,
       data: repositories
     });
-  } catch (error: any) {
-    console.error('Error fetching GitHub repositories:', error);
+  } catch (error) {
+    console.error('[github/repositories/route.ts]', error);
+
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch repositories', message: error.message },
+      { success: false, error: 'Failed to fetch repositories', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

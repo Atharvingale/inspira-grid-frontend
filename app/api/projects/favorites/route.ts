@@ -64,10 +64,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         hasPrev: startIndex > 0
       }
     });
-  } catch (error: any) {
-    console.error('Error fetching favorite projects:', error);
+  } catch (error) {
+    console.error('[projects/favorites/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch favorites', message: error.message },
+      { error: 'Failed to fetch favorites', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }

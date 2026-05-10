@@ -26,10 +26,11 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
       exists: true,
       application
     });
-  } catch (error: any) {
-    console.error('Error checking application:', error);
+  } catch (error) {
+    console.error('[projects/[id]/my-application/route.ts]', error);
+
     return NextResponse.json(
-      { error: 'Failed to check application', message: error.message },
+      { error: 'Failed to check application', message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error' },
       { status: 500 }
     );
   }
