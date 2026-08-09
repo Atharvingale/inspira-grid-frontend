@@ -31,13 +31,10 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     const projectData = projectDoc.data();
     
-    // Check if user is owner or team member
-    const isOwner = projectData?.owner?.id === user.uid;
-    const isTeamMember = projectData?.team?.some((member: any) => member.userId === user.uid);
-    
-    if (!isOwner && !isTeamMember) {
+    const isOwner = projectData?.owner?.id === user.uid || projectData?.ownerId === user.uid;
+    if (!isOwner) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized to link repository to this project' },
+        { success: false, error: 'Only the project owner can link a repository' },
         { status: 403 }
       );
     }

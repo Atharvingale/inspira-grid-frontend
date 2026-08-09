@@ -94,7 +94,6 @@ export const POST = withAuth(async (request: NextRequest, user, context: { param
     return NextResponse.json({
       success: true,
       data: {
-        id: changeRequestRef.id,
         ...changeRequest
       }
     });

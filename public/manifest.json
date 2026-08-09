@@ -1,7 +1,7 @@
 {
   "name": "Inspira Grid - Project Collaboration Platform",
   "short_name": "Inspira Grid",
-  "description": "Collaborative project management platform for teams to manage projects, milestones, time tracking, and real-time communication.",
+  "description": "A collaborative platform for discovering projects, building teams, and communicating with collaborators.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0f172a",

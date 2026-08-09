@@ -1,81 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateFirebaseToken } from '@/lib/middleware/auth';
+import { withAuth } from '@/lib/middleware/auth';
+import { getStorage, initAdmin } from '@/lib/firebase-admin';
 
-// POST /api/upload - Upload file
-export async function POST(request: NextRequest) {
-  try {
-    const user = await validateFirebaseToken(request);
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain']);
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const type = formData.get('type') as string;
-
-    if (!file) {
-      return NextResponse.json(
-        { error: 'File is required' },
-        { status: 400 }
-      );
-    }
-
-    // TODO: Implement actual file upload to cloud storage (e.g., Firebase Storage, Cloudinary, S3)
-    // For now, return mock response
-    
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: 'File size exceeds 10MB limit' },
-        { status: 400 }
-      );
-    }
-
-    // Determine if file is an image
-    const isImage = file.type.startsWith('image/');
-
-    // Mock upload response
-    const uploadResponse = {
-      url: `https://example.com/uploads/${Date.now()}_${file.name}`,
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      isImage,
-      uploadedBy: user.uid,
-      uploadedAt: new Date().toISOString()
-    };
-
-    /* TODO: Actual implementation would look like:
-    
-    // Upload to Firebase Storage
-    const storage = getStorage();
-    const storageRef = ref(storage, `uploads/${user.uid}/${Date.now()}_${file.name}`);
-    const snapshot = await uploadBytes(storageRef, await file.arrayBuffer());
-    const url = await getDownloadURL(snapshot.ref);
-    
-    // Or upload to Cloudinary
-    const cloudinary = require('cloudinary').v2;
-    const result = await cloudinary.uploader.upload(file, {
-      folder: 'inspira-grid/messages',
-      resource_type: 'auto'
-    });
-    
-    */
-
-    return NextResponse.json({
-      success: true,
-      ...uploadResponse
-    });
-  } catch (error: any) {
-    console.error('Error uploading file:', error);
-    return NextResponse.json(
-      { error: 'Failed to upload file', message: error.message },
-      { status: 500 }
-    );
-  }
+function safeFileName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120);
 }
+
+// POST /api/upload — authenticated Firebase Storage upload for project/message attachments.
+export const POST = withAuth(async (request: NextRequest, user) => {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const scope = formData.get('scope') === 'project' ? 'projects' : 'messages';
+    if (!(file instanceof File)) {
+      return NextResponse.json({ success: false, error: 'A file is required' }, { status: 400 });
+    }
+    if (file.size === 0 || file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ success: false, error: 'File must be between 1 byte and 10 MB' }, { status: 400 });
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json({ success: false, error: 'Unsupported file type' }, { status: 415 });
+    }
+
+    initAdmin();
+    const objectPath = `${scope}/${user.uid}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+    const storageFile = getStorage().bucket().file(objectPath);
+    await storageFile.save(Buffer.from(await file.arrayBuffer()), {
+      metadata: { contentType: file.type, metadata: { ownerId: user.uid, originalName: file.name } },
+      resumable: false,
+    });
+    const [url] = await storageFile.getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000 });
+    return NextResponse.json({ success: true, data: { path: objectPath, url, name: file.name, size: file.size, type: file.type } }, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Upload failed';
+    console.error('Upload failed:', message);
+    return NextResponse.json({ success: false, error: 'Upload failed', message }, { status: 500 });
+  }
+});

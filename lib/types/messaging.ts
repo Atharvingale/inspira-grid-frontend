@@ -171,33 +171,6 @@ export interface MessageDraft {
   lastModified: string;
 }
 
-// Real-time events
-export interface MessagingSocketEvents {
-  // Message events
-  'message:new': EnhancedMessage;
-  'message:updated': { messageId: string; updates: Partial<EnhancedMessage> };
-  'message:deleted': { messageId: string; conversationId: string };
-  'message:reaction_added': { messageId: string; reaction: MessageReaction };
-  'message:reaction_removed': { messageId: string; emoji: string; userId: string };
-  'message:read': { messageId: string; conversationId: string; userId: string };
-  
-  // Conversation events
-  'conversation:created': Conversation;
-  'conversation:updated': { conversationId: string; updates: Partial<Conversation> };
-  'conversation:participant_added': { conversationId: string; participant: ConversationParticipant };
-  'conversation:participant_removed': { conversationId: string; userId: string };
-  'conversation:archived': { conversationId: string };
-  
-  // Typing events
-  'typing:start': TypingIndicator;
-  'typing:stop': { userId: string; conversationId: string };
-  
-  // Presence events
-  'user:online': { userId: string; lastSeen: string };
-  'user:offline': { userId: string; lastSeen: string };
-  'user:status_changed': { userId: string; status: UserPresenceStatus };
-}
-
 export interface UserPresenceStatus {
   status: 'online' | 'away' | 'busy' | 'offline';
   customMessage?: string;

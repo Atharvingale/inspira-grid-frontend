@@ -287,28 +287,6 @@ export interface SearchParams {
   filters?: Record<string, any>;
 }
 
-// Socket.io event types
-export interface SocketEvents {
-  // User events
-  'user:online': { userId: string };
-  'user:offline': { userId: string };
-  
-  // Message events
-  'message:new': Message;
-  'message:read': { messageId: string; readBy: string };
-  
-  // Project events
-  'project:updated': Project;
-  'project:application': Application;
-  
-  // Team events
-  'team:member_joined': { teamId: string; member: TeamMember };
-  'team:member_left': { teamId: string; userId: string };
-  
-  // Notification events
-  'notification:new': Notification;
-}
-
 // Component props types
 export interface TableColumn<T = any> {
   key: keyof T | string;
@@ -346,17 +324,6 @@ export interface AuthContextValue {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
-}
-
-// Socket context types
-export interface SocketContextValue {
-  socket: any; // Socket.io client instance
-  connected: boolean;
-  connect: () => void;
-  disconnect: () => void;
-  emit: (event: keyof SocketEvents, data?: any) => void;
-  on: (event: keyof SocketEvents, handler: (data: any) => void) => void;
-  off: (event: keyof SocketEvents, handler?: (data: any) => void) => void;
 }
 
 // Utility types
@@ -417,18 +384,6 @@ export type {
   MessageReaction,
   MessageAttachment as MessageAttachmentEnhanced
 } from './messaging';
-
-// Re-export video call types
-export type {
-  VideoCall,
-  CreateCallRequest,
-  JoinCallRequest,
-  UpdateCallRequest,
-  ScheduleCallRequest,
-  ScheduledCall,
-  CallRecording,
-  CallParticipant
-} from './videoCalls';
 
 // Export commonly used type combinations
 export type ProjectWithDetails = RequiredFields<ProjectDetails, 'teamMembers' | 'applicationsCount'>;

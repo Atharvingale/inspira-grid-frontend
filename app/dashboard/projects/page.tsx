@@ -705,7 +705,7 @@ const ProjectCard = ({
   const router = useRouter();
   
   const getStatusBadge = () => {
-    const statusConfig = {
+    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
       'open': { bg: 'bg-success-500/20', text: 'text-success-500', label: 'Open' },
       'in-progress': { bg: 'bg-brand-primary/20', text: 'text-brand-primary', label: 'In Progress' },
       'completed': { bg: 'bg-text-tertiary/20', text: 'text-text-tertiary', label: 'Completed' }

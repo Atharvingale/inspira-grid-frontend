@@ -144,32 +144,6 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
-// Socket Event Types
-export interface SocketEvents {
-  // Message events
-  'message:send': (message: Omit<Message, 'id' | 'timestamp'>) => void;
-  'message:receive': (message: Message) => void;
-  'message:typing': (data: { conversationId: string; userId: string; userName: string }) => void;
-  'message:stop_typing': (data: { conversationId: string; userId: string }) => void;
-  
-  // User events
-  'user:online': (userId: string) => void;
-  'user:offline': (userId: string) => void;
-  'user:join': (data: { userId: string; conversationId: string }) => void;
-  'user:leave': (data: { userId: string; conversationId: string }) => void;
-  
-  // Project events
-  'project:update': (project: Project) => void;
-  'project:application': (application: Application) => void;
-  'project:team_update': (data: { projectId: string; teamMembers: TeamMember[] }) => void;
-  
-  // General events
-  'notification': (notification: Notification) => void;
-  'error': (error: { message: string; code?: string }) => void;
-  'connect': () => void;
-  'disconnect': () => void;
-}
-
 // Form Data Interfaces
 export interface LoginFormData {
   email: string;
@@ -308,42 +282,6 @@ export interface FirebaseUser {
   photoURL: string | null;
   emailVerified: boolean;
   getIdToken: (forceRefresh?: boolean) => Promise<string>;
-}
-
-// Socket Context Types
-export interface SocketContextType {
-  socket: Socket | null;
-  onlineUsers: Set<string>;
-  notifications: Notification[];
-  joinTeamRoom: (teamId: string) => void;
-  leaveTeamRoom: (teamId: string) => void;
-  joinProjectRoom: (projectId: string) => void;
-  leaveProjectRoom: (projectId: string) => void;
-  joinConversationRoom: (conversationId: string) => void;
-  leaveConversationRoom: (conversationId: string) => void;
-  sendMessage: (messageData: MessageData) => void;
-  startTyping: (roomId: string, userId: string) => void;
-  stopTyping: (roomId: string, userId: string) => void;
-  markNotificationAsRead: (notificationId: string) => void;
-  clearAllNotifications: () => void;
-  isUserOnline: (userId: string) => boolean;
-}
-
-export interface MessageData {
-  conversationId: string;
-  content: string;
-  type: 'text' | 'file' | 'system';
-  senderId: string;
-  senderName: string;
-}
-
-// Socket Interface
-export interface Socket {
-  id: string;
-  emit: (event: string, data?: unknown) => void;
-  on: (event: string, callback: (data: unknown) => void) => void;
-  off: (event: string, callback?: (data: unknown) => void) => void;
-  close: () => void;
 }
 
 // HTTP Methods for API

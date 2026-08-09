@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import { getFirestore, initAdmin } from '@/lib/firebase-admin';
+import type { DocumentData, Query } from 'firebase-admin/firestore';
 
 // GET /api/projects/:id/applications
 export const GET = withAuth(async (request: NextRequest, user, context: { params: Promise<{ id: string }> }) => {
@@ -34,14 +35,14 @@ export const GET = withAuth(async (request: NextRequest, user, context: { params
     }
 
     // Build query
-    let query: any = db.collection('applications').where('projectId', '==', id);
+    let query: Query<DocumentData> = db.collection('applications').where('projectId', '==', id);
     
     if (status) {
       query = query.where('status', '==', status);
     }
 
     const snapshot = await query.orderBy('createdAt', 'desc').get();
-    const applications = snapshot.docs.map(doc => ({
+    const applications = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data()
     }));

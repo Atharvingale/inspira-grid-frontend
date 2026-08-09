@@ -32,6 +32,21 @@ interface UserProfile {
   profileComplete?: boolean;
   joinedAt?: string;
   role?: 'user' | 'admin';
+  suspended?: boolean;
+  notificationSettings?: {
+    emailNotifications?: boolean;
+    projectUpdates?: boolean;
+    applicationUpdates?: boolean;
+    messageNotifications?: boolean;
+    weeklyDigest?: boolean;
+  };
+  privacySettings?: {
+    profileVisibility?: string;
+    showEmail?: boolean;
+    showLocation?: boolean;
+    allowDirectMessages?: boolean;
+    showOnlineStatus?: boolean;
+  };
 }
 
 interface AuthContextType {

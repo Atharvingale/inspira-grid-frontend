@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Lock, Shield, Info, Check, User } from "lucide-react";
+import { Bell, Lock, Shield, Info, Check, User, Save } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useAuth } from "@/lib/AuthContext";
@@ -47,10 +47,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (userProfile) {
       if (userProfile.notificationSettings) {
-        setNotifications(userProfile.notificationSettings);
+        setNotifications((current) => ({ ...current, ...userProfile.notificationSettings }));
       }
       if (userProfile.privacySettings) {
-        setPrivacy(userProfile.privacySettings);
+        setPrivacy((current) => ({ ...current, ...userProfile.privacySettings }));
       }
     }
   }, [userProfile]);
@@ -408,7 +408,7 @@ export default function SettingsPage() {
               <div className="p-6 rounded-xl bg-dark-surface/50 border border-dark-border">
                 <div className="text-warning-500 text-3xl mb-4">⚡</div>
                 <h3 className="font-semibold text-text-primary mb-2 text-lg">Real-time</h3>
-                <p className="text-sm text-text-tertiary">Socket.IO Messaging</p>
+                <p className="text-sm text-text-tertiary">Pusher notifications</p>
               </div>
             </div>
             

@@ -318,7 +318,7 @@ export default function HomePage() {
               {
                 icon: <Trophy className="w-8 h-8" />,
                 title: "Progress Tracking",
-                description: "Beautiful dashboards to monitor milestones and celebrate team achievements.",
+                description: "Beautiful dashboards to monitor project progress and celebrate team achievements.",
                 gradient: "from-yellow-500 to-orange-500",
                 delay: 0.5
               },

@@ -92,7 +92,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const response = await notificationService.getNotifications(isRead, type, limit);
       
       if (response.success && response.data) {
-        setNotifications(response.data.data || []);
+        setNotifications((response.data.data || []) as unknown as NotificationData[]);
         
         // Update unread count if fetching all notifications
         if (isRead === undefined) {

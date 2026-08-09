@@ -30,10 +30,7 @@ export async function GET(request: NextRequest) {
     // Initialize Firebase Admin and get Firestore instance
     initAdmin();
     const db = getFirestore();
-    let usersQuery = db.collection('users');
-
-    // Apply limit
-    usersQuery = usersQuery.limit(limit);
+    const usersQuery = db.collection('users').limit(Math.min(Math.max(limit, 1), 50));
 
     // Execute query
     const usersSnapshot = await usersQuery.get();

@@ -91,7 +91,7 @@ const Profile = () => {
         });
         
         // Remove duplicates
-        const uniqueSuggestions = [...new Set(suggestions)];
+        const uniqueSuggestions = [...new Set<string>(suggestions)];
         setLocationSuggestions(uniqueSuggestions);
       }
     } catch (error) {

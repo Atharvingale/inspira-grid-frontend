@@ -14,7 +14,7 @@ import type {
  * Enhanced Messaging Service
  * 
  * Handles all messaging-related API operations including:
- * - Real-time messaging with Socket.IO integration
+ * - Real-time messaging through the application's notification provider
  * - File attachments and media sharing
  * - Message reactions and threading
  * - Conversation management

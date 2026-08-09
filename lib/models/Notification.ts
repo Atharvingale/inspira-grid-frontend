@@ -33,15 +33,15 @@ class NotificationModel {
     try {
       const docRef = this.collection.doc();
       const notification = {
-        id: docRef.id,
         ...notificationData,
+        id: docRef.id,
         isRead: false,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
       };
 
       await docRef.set(notification);
-      return { id: docRef.id, ...notification };
+      return notification;
     } catch (error) {
       console.error('Error creating notification:', error);
       throw error;
@@ -49,13 +49,13 @@ class NotificationModel {
   }
 
   // Get notification by ID
-  async getById(notificationId: string) {
+  async getById(notificationId: string): Promise<EnrichedNotification | null> {
     try {
       const doc = await this.collection.doc(notificationId).get();
       if (!doc.exists) {
         return null;
       }
-      return { id: doc.id, ...doc.data() };
+      return { ...doc.data(), id: doc.id } as EnrichedNotification;
     } catch (error) {
       console.error('Error getting notification:', error);
       throw error;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
+import { validateFirebaseToken } from '@/lib/middleware/auth';
 
 // POST /api/pusher/auth - Authenticate Pusher private/presence channels
 export async function POST(request: NextRequest) {
@@ -18,33 +19,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get current user from Firebase Auth on the client side
-    // Pusher auth happens from the browser, so we need to validate differently
-    // For now, authorize all requests (in production, implement proper validation)
-    
-    // Try to get user info from Authorization header if present
-    const authHeader = request.headers.get('authorization');
-    let userId = 'anonymous';
-    let userName = 'Anonymous User';
-    let userEmail = '';
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.split('Bearer ')[1];
-        // In a production app, verify this token properly
-        // For now, we'll decode it client-side in the Pusher config
-        userId = 'authenticated-user';
-      } catch (error) {
-        console.warn('Could not decode auth token for Pusher:', error);
-      }
+    const user = await validateFirebaseToken(request);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Only a user's own private channel may be authorized from this endpoint.
+    const expectedChannel = `private-user-${user.uid}`;
+    if (channelName !== expectedChannel) {
+      return NextResponse.json({ success: false, error: 'Channel access denied' }, { status: 403 });
     }
 
     // Authorize the user for private/presence channels
     const authResponse = pusherServer.authorizeChannel(socketId, channelName, {
-      user_id: userId,
+      user_id: user.uid,
       user_info: {
-        name: userName,
-        email: userEmail,
+        name: user.displayName || 'Inspira Grid user',
+        email: user.email || '',
       },
     });
 

@@ -33,20 +33,6 @@ export async function validateFirebaseToken(request: NextRequest): Promise<Authe
 
     const token = authHeader.split('Bearer ')[1];
 
-    // In development, accept mock tokens
-    if (process.env.NODE_ENV !== 'production' && token.startsWith('mock-token-')) {
-      const parts = token.split('mock-token-')[1];
-      const uid = parts?.split('-')[0];
-      
-      return {
-        uid: uid || 'mock-user',
-        email: `${uid || 'mock-user'}@example.com`,
-        displayName: (uid || 'mock-user').replace(/-/g, ' '),
-        profileComplete: true,
-        role: 'user'
-      };
-    }
-
     // Verify Firebase ID token
     const auth = getAuth();
     const decodedToken = await auth.verifyIdToken(token);
@@ -57,6 +43,7 @@ export async function validateFirebaseToken(request: NextRequest): Promise<Authe
     
     if (userDoc.exists) {
       const userData = userDoc.data();
+      if (userData?.suspended === true) return null;
       return {
         uid: decodedToken.uid,
         ...userData
