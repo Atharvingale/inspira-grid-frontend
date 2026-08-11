@@ -2,23 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* NUCLEAR LEVEL INPUT TEXT VISIBILITY FIXES - LOAD FIRST */
-* input { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #ffffff !important; }
-* textarea { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #ffffff !important; }
-* select { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
-input { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #ffffff !important; }
-textarea { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #ffffff !important; }
-select { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
-input[type] { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #ffffff !important; }
-input[class*="input"] { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #ffffff !important; }
-input[class*="Input"] { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #ffffff !important; }
-
+/* ─── Design tokens (Antigravity-inspired, Inspira-Grid identity) ─── */
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 15, 15, 35;
-  --background-end-rgb: 3, 7, 18;
-  --surface-rgb: 22, 33, 62;
-  --border-rgb: 31, 41, 55;
+  --ig-bg: #050505;
+  --ig-bg-elevated: #0a0a0a;
+  --ig-surface: #111111;
+  --ig-surface-hover: #161616;
+  --ig-border: #1f1f1f;
+  --ig-border-strong: #2a2a2a;
+  --ig-text: #f5f2eb;
+  --ig-text-secondary: #c4bfb5;
+  --ig-text-muted: #7a756c;
+  --ig-accent: #6ee7ff;
+  --ig-accent-dim: rgba(110, 231, 255, 0.12);
+  --ig-accent-strong: #3dd6f5;
+  --ig-success: #34d399;
+  --ig-warning: #fbbf24;
+  --ig-danger: #f87171;
+  --ig-radius: 0.5rem;
+  --ig-radius-lg: 0.75rem;
+  --ig-focus: 0 0 0 2px var(--ig-bg), 0 0 0 4px var(--ig-accent);
 }
 
 * {
@@ -27,346 +30,153 @@ input[class*="Input"] { color: #ffffff !important; -webkit-text-fill-color: #fff
 
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      135deg,
-      rgb(var(--background-start-rgb)) 0%,
-      rgb(var(--background-end-rgb)) 100%
-    );
-  font-feature-settings: 'cv11', 'ss01';
+  color: var(--ig-text);
+  background: var(--ig-bg);
+  font-feature-settings: "ss01", "cv11";
   font-variant-numeric: tabular-nums;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
+  .ig-container {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .ig-hairline {
+    border-color: var(--ig-border);
+  }
+
+  .ig-surface {
+    background: var(--ig-surface);
+    border: 1px solid var(--ig-border);
+  }
+
+  .ig-display {
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+  }
 }
 
-/* Enhanced scrollbar styling */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
-  border-radius: 8px;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
+  background: rgba(122, 117, 108, 0.35);
   border-radius: 8px;
-  transition: background 0.2s ease;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.6);
+  background: rgba(122, 117, 108, 0.55);
 }
 
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-/* Focus styles for better accessibility */
-*:focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 2px;
-}
-
-/* Selection styles */
-::selection {
-  background-color: rgba(99, 102, 241, 0.2);
-  color: #ffffff;
-}
-
-/* Smooth transitions for interactive elements */
-.transition-smooth {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Loading animation */
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 1;
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
-  }
-  50% {
-    opacity: 0.7;
-    box-shadow: 0 0 40px rgba(99, 102, 241, 0.6);
-  }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* Responsive utilities */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  scrollbar-color: rgba(122, 117, 108, 0.35) transparent;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Focus */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--ig-focus);
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+::selection {
+  background-color: rgba(110, 231, 255, 0.25);
+  color: var(--ig-text);
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
-  border-radius: 3px;
+/* Form controls — restrained, no global forced white */
+input,
+textarea,
+select {
+  color: var(--ig-text);
+  caret-color: var(--ig-text);
 }
 
-/* Mobile optimizations */
-@media (max-width: 768px) {
-  .text-responsive {
-    font-size: clamp(1rem, 4vw, 1.25rem);
-  }
-  
-  .heading-responsive {
-    font-size: clamp(1.5rem, 6vw, 2.5rem);
-  }
-  
-  .hero-responsive {
-    font-size: clamp(2rem, 8vw, 4rem);
-  }
+input::placeholder,
+textarea::placeholder {
+  color: var(--ig-text-muted);
+  opacity: 1;
 }
 
-/* Touch targets for mobile */
-@media (max-width: 768px) {
-  button, a, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/* Prevent horizontal scroll on mobile */
-body {
-  overflow-x: hidden;
-}
-
-/* Fix autofill styling */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 30px var(--ig-surface) inset !important;
+  -webkit-text-fill-color: var(--ig-text) !important;
+  caret-color: var(--ig-text) !important;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
-/* Ensure form text is visible - aggressive approach */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-input[type="tel"],
-input[type="url"],
-input[type="number"],
-textarea,
-select {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-}
-
-/* Force input text visibility on all states */
-input:focus,
-input:active,
-input:hover,
-textarea:focus,
-textarea:active,
-textarea:hover,
-select:focus,
-select:active,
-select:hover {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  outline: none !important;
-}
-
-/* Placeholder styling */
-input::placeholder,
-textarea::placeholder {
-  color: #9ca3af !important;
-  opacity: 0.7 !important;
-  -webkit-text-fill-color: #9ca3af !important;
-}
-
-/* Override ANY potential Tailwind conflicts */
-.text-white input,
-.text-gray-400 input,
-.placeholder\:text-gray-400 input,
-input.text-white,
-input.placeholder\:text-gray-400,
-[class*="text-"] input,
-input[class*="text-"],
-.bg-dark-surface input,
-input.bg-dark-surface {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-}
-
-/* Force visibility on focused inputs */
-input:focus,
-input:focus-visible,
-input:active,
-input:hover,
-textarea:focus,
-textarea:focus-visible,
-textarea:active,
-textarea:hover {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  background-color: transparent;
-  outline: none !important;
-}
-
-/* Chrome/Safari specific fixes */
-input:-internal-autofill-selected,
-input:-internal-autofill-previewed {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  background-color: transparent !important;
-}
-
-/* Data attribute specific targeting */
-input[data-input="true"],
-textarea[data-textarea="true"] {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-}
-
-input[data-input="true"]:focus,
-input[data-input="true"]:active,
-input[data-input="true"]:hover,
-textarea[data-textarea="true"]:focus,
-textarea[data-textarea="true"]:active,
-textarea[data-textarea="true"]:hover {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-}
-
-/* Force text color with highest possible specificity */
-[data-input="true"][type="text"],
-[data-input="true"][type="email"],
-[data-input="true"][type="password"],
-[data-input="true"][type="search"],
-[data-input="true"][type="tel"],
-[data-input="true"][type="url"],
-[data-input="true"][type="number"] {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-}
-
-/* Additional browser-specific fixes */
-input::-webkit-input-placeholder {
-  color: #9ca3af !important;
-}
-
-input::-moz-placeholder {
-  color: #9ca3af !important;
-  opacity: 1 !important;
-}
-
-input:-ms-input-placeholder {
-  color: #9ca3af !important;
-}
-
-/* Option text for selects */
 option {
-  color: #ffffff !important;
-  background-color: #1f2937 !important;
+  color: var(--ig-text);
+  background-color: var(--ig-surface);
 }
 
-/* STRONGEST POSSIBLE FIXES FOR FORM TEXT VISIBILITY */
-
-/* Universal input text color override */
-*,
-*::before,
-*::after {
-  input,
-  textarea,
-  select {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    caret-color: #ffffff !important;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-/* Direct element targeting */
-input,
-input[type],
-textarea,
-select,
-.input,
-[role="textbox"] {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  background-color: transparent !important;
+/* Touch targets */
+@media (max-width: 768px) {
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+  }
 }
 
-/* Force on all possible states */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
+/* Skeleton pulse */
+@keyframes ig-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-/* Tailwind class overrides */
-.text-white,
-.text-text-primary,
-.text-gray-100,
-.text-gray-200 {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+.ig-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--ig-surface) 25%,
+    var(--ig-surface-hover) 50%,
+    var(--ig-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: ig-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--ig-radius);
 }
 
-/* Force visibility on focus and interaction */
-input:focus,
-input:active,
-input:hover,
-textarea:focus,
-textarea:active,
-textarea:hover {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  opacity: 1 !important;
-}
-
-/* CSS Custom Properties override */
-input {
-  --tw-text-opacity: 1 !important;
-  color: rgb(255 255 255 / var(--tw-text-opacity)) !important;
-}
-
-/* Final nuclear option */
-body input,
-body textarea,
-body select,
-html input,
-html textarea,
-html select {
-  color: white !important;
-  -webkit-text-fill-color: white !important;
-  caret-color: white !important;
+@media (prefers-reduced-motion: reduce) {
+  .ig-skeleton {
+    animation: none;
+    background: var(--ig-surface);
+  }
 }
