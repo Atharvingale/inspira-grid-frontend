@@ -18,6 +18,20 @@ test('Pusher private channels require the authenticated user channel', async () 
   assert.match(source, /Channel access denied/);
 });
 
+test('example environment configuration contains no Firebase web API key', async () => {
+  const source = await read('.env.example');
+  assert.doesNotMatch(source, /AIza[0-9A-Za-z_-]{35}/);
+  assert.match(source, /^NEXT_PUBLIC_FIREBASE_API_KEY=$/m);
+});
+
+test('Pusher client authenticates with Firebase against the local authorization endpoint', async () => {
+  const source = await read('lib/pusher.ts');
+  assert.match(source, /channelAuthorization/);
+  assert.match(source, /endpoint:\s*'\/api\/pusher\/auth'/);
+  assert.match(source, /Authorization:\s*`Bearer \$\{idToken\}`/);
+  assert.doesNotMatch(source, /authEndpoint:/);
+});
+
 test('production builds do not ignore static checks', async () => {
   const source = await read('next.config.js');
   assert.doesNotMatch(source, /ignoreBuildErrors/);

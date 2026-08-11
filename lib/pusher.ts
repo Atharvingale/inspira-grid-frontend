@@ -13,11 +13,58 @@ export const pusherServer = new Pusher({
 // Client-side Pusher instance
 export const getPusherClient = () => {
   if (typeof window === 'undefined') return null;
+
+  const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
+  const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+  if (!key || !cluster) {
+    console.warn('Real-time updates are unavailable: Pusher client configuration is missing.');
+    return null;
+  }
   
-  return new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-    authEndpoint: '/api/pusher/auth',
+  const client = new PusherClient(key, {
+    cluster,
+    channelAuthorization: {
+      transport: 'ajax',
+      endpoint: '/api/pusher/auth',
+      customHandler: async ({ socketId, channelName }, callback) => {
+        try {
+          const { auth } = await import('@/lib/firebase');
+          const user = auth.currentUser;
+          if (!user) {
+            throw new Error('No Firebase user is signed in.');
+          }
+
+          const idToken = await user.getIdToken();
+          const response = await fetch('/api/pusher/auth', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: new URLSearchParams({
+              socket_id: socketId,
+              channel_name: channelName,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Pusher authorization failed: ${response.status}`);
+          }
+
+          callback(null, await response.json());
+        } catch (error) {
+          console.warn('Real-time updates are unavailable. API data will continue to refresh normally.');
+          callback(error instanceof Error ? error : new Error('Pusher authorization failed.'), null);
+        }
+      },
+    },
   });
+
+  client.connection.bind('error', () => {
+    console.warn('Real-time updates are unavailable. API data will continue to refresh normally.');
+  });
+
+  return client;
 };
 
 // Helper function to trigger events

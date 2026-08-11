@@ -1,0 +1,42 @@
+# Antigravity-Inspired Inspira-Grid Redesign
+
+## Summary
+
+Redesign the landing page and authenticated workspace around an Antigravity-inspired visual language: a near-black canvas, oversized confident typography, cinematic whitespace, precise motion, an interactive particle-field hero, and minimal high-intent navigation. The result remains uniquely Inspira-Grid—no Google branding, assets, copy, or exact layouts.
+
+## Visual System and Shell
+
+- Establish a dark-only design system with neutral black/charcoal surfaces, warm off-white typography, one electric accent color, thin borders, large type scale, generous spacing, and restrained rounded corners.
+- Remove the current glassmorphism layering, gradient overload, decorative floating blobs, and animation on ordinary navigation/content.
+- Build a shared responsive shell: compact wordmark/navigation on public pages; collapsible left rail, global search, notifications, user menu, and mobile bottom navigation for the workspace.
+- Add a high-performance canvas/SVG particle field to the landing hero that subtly reacts to pointer movement, disables under `prefers-reduced-motion`, and falls back to a static visual on touch/low-performance devices.
+- Standardize all controls, cards, forms, empty states, skeletons, dialogs, and status chips using the new token system; remove global forced input styling.
+
+## Landing, Authentication, and Workspace UX
+
+- Rebuild the landing page as a focused conversion journey: minimal header, bold product statement, one primary CTA, one secondary path, interactive hero, concise proof of value, real feature explanations, and a direct final CTA.
+- Remove unsupported claims and static marketing indicators, including AI matching, “community online,” repositories connected, and hard-coded growth/usage statements.
+- Redesign sign-in and registration as calm, distraction-free panels that retain the particle-field atmosphere without compromising form clarity or accessibility.
+- Replace the dashboard with an action-first command center: profile completion, active projects, pending applications, unread messages, real notifications, and one clear next action per user state.
+- Rebuild project discovery with a dense-but-readable feed, URL-backed filters, local saved filter preferences, favorites, project capacity/status, and distinct empty states.
+- Rebuild project detail as a structured workspace—overview, team, applications, discussions, and resources—using only available project and GitHub data.
+- Modernize messaging, applications, profile, and creation flows with clear hierarchy, real-time status feedback, draft preservation, keyboard-friendly actions, and mobile-first responsive states.
+
+## Real Data and Useful Additions
+
+- Remove fabricated trends, random chart values, fake activity, placeholder message counts, and mock GitHub applicant/repository metrics.
+- Show only values returned by existing APIs or values safely derived from projects, applications, conversations, and notifications; otherwise use intentional “no data yet” states.
+- Add guided collaboration without backend changes: onboarding checklist, contextual next-step cards, project health summaries derived from real data, saved local discovery filters, and recent activity assembled from real notifications/messages.
+- Keep settings and admin functional with the new component system; defer their full information-architecture redesign after the core release.
+
+## Validation
+
+- Add visual regression coverage for desktop and mobile public/authenticated layouts and tests for real-data-only rendering.
+- Test project filtering, saved preferences, draft restoration, authenticated navigation, loading/error/empty states, keyboard navigation, reduced motion, and color contrast.
+- Run type-check, security tests, lint, and a production build; complete manual testing with both an empty account and a populated multi-project account.
+
+## Assumptions
+
+- The Antigravity reference guides mood, motion, hierarchy, and interaction principles—not copied branding or implementation.
+- The design applies to both landing and workspace pages, with the workspace favoring utility and density over cinematic effects.
+- Dark mode is the only supported theme, and the redesign uses existing backend capabilities rather than introducing new data models.
