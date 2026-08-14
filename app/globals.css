@@ -1,21 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ─── Design tokens (Antigravity-inspired, Inspira-Grid identity) ─── */
 :root {
-  --ig-bg: #050505;
-  --ig-bg-elevated: #0a0a0a;
-  --ig-surface: #111111;
-  --ig-surface-hover: #161616;
-  --ig-border: #1f1f1f;
-  --ig-border-strong: #2a2a2a;
-  --ig-text: #f5f2eb;
-  --ig-text-secondary: #c4bfb5;
-  --ig-text-muted: #7a756c;
-  --ig-accent: #6ee7ff;
-  --ig-accent-dim: rgba(110, 231, 255, 0.12);
-  --ig-accent-strong: #3dd6f5;
+  --ig-bg: #020617;
+  --ig-bg-elevated: #0a0f1e;
+  --ig-surface: #0f172a;
+  --ig-surface-hover: #1e293b;
+  --ig-border: #1e293b;
+  --ig-border-strong: #334155;
+  --ig-text: #f1f5f9;
+  --ig-text-secondary: #94a3b8;
+  --ig-text-muted: #475569;
+  --ig-accent: #818cf8;
+  --ig-accent-dim: rgba(129, 140, 248, 0.12);
+  --ig-accent-strong: #6366f1;
   --ig-success: #34d399;
   --ig-warning: #fbbf24;
   --ig-danger: #f87171;
@@ -34,6 +36,7 @@ html {
 }
 
 body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--ig-text);
   background: var(--ig-bg);
   font-feature-settings: "ss01", "cv11";

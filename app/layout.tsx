@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" data-scroll-behavior="smooth">
-      <body className="font-sans antialiased bg-dark text-text-primary">
+      <body className="antialiased" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", background: 'var(--ig-bg)', color: 'var(--ig-text)' }}>
         <ClientProviders>{children}</ClientProviders>
       </body>
     </html>

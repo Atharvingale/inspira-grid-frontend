@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { useMessaging } from '@/lib/contexts/MessagingContext';
 import Loading from '@/components/common/Loading';
@@ -8,6 +8,9 @@ import { ConversationList } from '@/components/messages/ConversationList';
 import { MessageBubble } from '@/components/messages/MessageBubble';
 import { FileUpload } from '@/components/messages/FileUpload';
 import { NewConversationModal } from '@/components/messages/NewConversationModal';
+import { Send, Paperclip, ArrowLeft, AlertCircle, Video, Phone, MoreVertical, Smile, Mic } from 'lucide-react';
+import { isToday, isYesterday } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Messages = () => {
   const { currentUser } = useAuth();
@@ -24,14 +27,23 @@ const Messages = () => {
     stopTyping,
     getConversationName,
   } = useMessaging();
-  
+
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showNewConversation, setShowNewConversation] = useState(false);
-  const [typing, setTyping] = useState(false);
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  // Mobile: show list or chat panel
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+
+  // Typing indicator — use ref to avoid stale closure
+  const isTypingRef = useRef(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-scroll sentinel
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     loadConversations();
@@ -43,33 +55,55 @@ const Messages = () => {
     }
   }, [state.activeConversation, loadMessages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !state.activeConversation) return;
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [state.activeConversation?.id, state.messages]);
 
+  // Auto-resize textarea
+  const autoResizeTextarea = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
+  }, []);
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const content = newMessage.trim();
+    if (!content || !state.activeConversation) return;
+
+    setSendError(null);
     try {
       setSendingMessage(true);
-      await sendMessage(state.activeConversation.id, newMessage);
+      await sendMessage(state.activeConversation.id, content);
       setNewMessage('');
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+      // Clear typing indicator
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        stopTyping(state.activeConversation.id);
+      }
     } catch (error) {
+      setSendError('Failed to send message. Please try again.');
       console.error('Error sending message:', error);
     } finally {
       setSendingMessage(false);
     }
   };
 
-  const handleNewConversation = () => {
-    setShowNewConversation(true);
-  };
+  const handleNewConversation = () => setShowNewConversation(true);
 
   const handleFileUpload = async (file: File) => {
     if (!state.activeConversation) return;
-    
     try {
       setSendingMessage(true);
       await sendFile(state.activeConversation.id, file);
       setShowFileUpload(false);
     } catch (error) {
+      setSendError('Failed to upload file. Please try again.');
       console.error('Error uploading file:', error);
     } finally {
       setSendingMessage(false);
@@ -94,244 +128,352 @@ const Messages = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setNewMessage(value);
-    
+    setSendError(null);
+    autoResizeTextarea();
+
     if (!state.activeConversation) return;
-    
-    // Handle typing indicators
-    if (value.trim() && !typing) {
-      setTyping(true);
+
+    // Start typing indicator
+    if (value.trim() && !isTypingRef.current) {
+      isTypingRef.current = true;
       startTyping(state.activeConversation.id);
     }
-    
-    // Clear existing timeout
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-    
-    // Set new timeout to stop typing
-    const timeout = setTimeout(() => {
-      if (typing) {
-        setTyping(false);
-        stopTyping(state.activeConversation!.id);
+
+    // Reset stop-typing debounce
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTypingRef.current && state.activeConversation) {
+        isTypingRef.current = false;
+        stopTyping(state.activeConversation.id);
       }
     }, 2000);
-    
-    setTypingTimeout(timeout);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Send on Enter (without Shift); Shift+Enter = newline
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage(e as any);
+      handleSendMessage();
     }
   };
 
-  const _formatTime = (date: Date | { seconds: number; nanoseconds: number }) => {
-    const dateObj = date instanceof Date ? date : new Date(date.seconds * 1000);
-    return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const handleConversationSelect = (conversation: Parameters<typeof setActiveConversation>[0]) => {
+    setActiveConversation(conversation);
+    setMobileView('chat');
   };
 
-  if (state.loading) {
+  const handleBackToList = () => {
+    setMobileView('list');
+  };
+
+  if (state.loading && state.conversations.length === 0) {
     return <Loading message="Loading messages..." />;
   }
 
-  return (
-    <div className="h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex overflow-hidden">
-      <ConversationList
-        conversations={state.conversations}
-        activeConversation={state.activeConversation}
-        searchQuery={searchQuery}
-        onConversationSelect={setActiveConversation}
-        onSearchChange={setSearchQuery}
-        onNewConversation={handleNewConversation}
-        getConversationName={getConversationName}
-        currentUserId={currentUser?.uid}
-      />
+  const activeMessages = state.activeConversation
+    ? (state.messages[state.activeConversation.id] || [])
+    : [];
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col relative">
+  const activeTypers = state.typingIndicators.filter(
+    t => t.conversationId === state.activeConversation?.id
+  );
+
+  const activeConversationName = state.activeConversation 
+    ? getConversationName(state.activeConversation) 
+    : '';
+
+  const getActiveConversationAvatar = () => {
+    if (!state.activeConversation) return null;
+    if (state.activeConversation.type === 'direct') {
+      const otherParticipant = state.activeConversation.participants.find(p => p.id !== currentUser?.uid);
+      return {
+        src: otherParticipant?.photoURL,
+        fallback: otherParticipant?.name?.charAt(0) || '?',
+      };
+    }
+    return {
+      src: undefined,
+      fallback: state.activeConversation.name?.charAt(0) || 'G',
+    };
+  };
+
+  const getHeaderStatus = () => {
+    if (activeTypers.length > 0) {
+      return 'Typing...';
+    }
+    if (state.activeConversation?.type === 'direct') {
+      const otherParticipant = state.activeConversation.participants.find(p => p.id !== currentUser?.uid);
+      return otherParticipant?.isOnline ? 'Online' : 'Offline';
+    }
+    return 'Online';
+  };
+
+  const status = getHeaderStatus();
+  const activeAvatar = getActiveConversationAvatar();
+
+  const getMessageDateLabel = (date: Date) => {
+    const d = new Date(date);
+    const dayStr = isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' });
+    const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return `${dayStr}, ${dateStr}`;
+  };
+
+  return (
+    <div
+      className="p-4 sm:p-6 flex gap-6 overflow-hidden w-full"
+      style={{ height: 'calc(100vh - 96px)', background: 'var(--ig-bg)' }}
+    >
+      {/* Conversation List Card — hidden on mobile when chat is open */}
+      <div
+        className={`
+          flex-shrink-0 border rounded-2xl md:rounded-3xl overflow-hidden
+          w-full md:w-80 lg:w-96
+          ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}
+          flex-col bg-[var(--ig-surface)] border-[var(--ig-border)] shadow-xl
+        `}
+      >
+        <ConversationList
+          conversations={state.conversations}
+          activeConversation={state.activeConversation}
+          searchQuery={searchQuery}
+          onConversationSelect={handleConversationSelect}
+          onSearchChange={setSearchQuery}
+          onNewConversation={handleNewConversation}
+          getConversationName={getConversationName}
+          currentUserId={currentUser?.uid}
+        />
+      </div>
+
+      {/* Chat Area Card */}
+      <div
+        className={`
+          flex-1 flex flex-col min-w-0 border rounded-2xl md:rounded-3xl overflow-hidden bg-[var(--ig-surface)] border-[var(--ig-border)] shadow-xl
+          ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}
+        `}
+      >
         {state.activeConversation ? (
           <>
             {/* Chat Header */}
-            <div className="relative z-10 px-6 py-4 bg-slate-900/60 backdrop-blur-xl border-b border-slate-800/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white font-semibold shadow-lg">
-                    {getConversationName(state.activeConversation).charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white">
-                      {getConversationName(state.activeConversation)}
-                    </h2>
-                    <p className="text-sm text-slate-400 flex items-center">
-                      <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
-                      {state.activeConversation.participants?.length || 0} participant{(state.activeConversation.participants?.length || 0) !== 1 ? 's' : ''}
-                    </p>
-                  </div>
+            <div
+              className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-[var(--ig-border)] bg-[var(--ig-surface)]"
+            >
+              {/* Mobile back button */}
+              <button
+                onClick={handleBackToList}
+                className="md:hidden p-2 rounded-lg mr-2 hover:bg-white/5 transition-colors"
+                aria-label="Back to conversations"
+              >
+                <ArrowLeft className="w-5 h-5 text-[var(--ig-text-secondary)]" />
+              </button>
+
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {activeAvatar && (
+                  <Avatar className="w-10 h-10 ring-2 ring-[var(--ig-border)] flex-shrink-0">
+                    <AvatarImage src={activeAvatar.src} />
+                    <AvatarFallback className="bg-[#1e293b] text-white font-semibold">
+                      {activeAvatar.fallback}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <div className="min-w-0">
+                  <h2 className="text-sm font-semibold text-white truncate">
+                    {activeConversationName}
+                  </h2>
+                  <p className="text-xs mt-0.5">
+                    {status === 'Typing...' ? (
+                      <span className="text-[var(--ig-accent)] font-semibold animate-pulse">Typing...</span>
+                    ) : status === 'Online' ? (
+                      <span className="text-emerald-400 font-semibold">Online</span>
+                    ) : (
+                      <span className="text-[var(--ig-text-muted)] font-medium">Offline</span>
+                    )}
+                  </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button className="p-2 hover:bg-slate-800/50 rounded-lg transition-colors">
-                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </button>
-                  <button className="p-2 hover:bg-slate-800/50 rounded-lg transition-colors">
-                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                  <button className="p-2 hover:bg-slate-800/50 rounded-lg transition-colors">
-                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
-                </div>
+              </div>
+
+              {/* Call/More Actions Header Icons */}
+              <div className="flex items-center gap-2">
+                <button className="p-2 text-[var(--ig-text-secondary)] hover:text-white hover:bg-[var(--ig-surface-hover)] rounded-xl transition-all" title="Video Call">
+                  <Video className="w-5 h-5" />
+                </button>
+                <button className="p-2 text-[var(--ig-text-secondary)] hover:text-white hover:bg-[var(--ig-surface-hover)] rounded-xl transition-all" title="Voice Call">
+                  <Phone className="w-5 h-5" />
+                </button>
+                <button className="p-2 text-[var(--ig-text-secondary)] hover:text-white hover:bg-[var(--ig-surface-hover)] rounded-xl transition-all" title="More Actions">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-gradient-to-b from-transparent via-slate-950/30 to-transparent">
-              {(state.messages[state.activeConversation.id] || []).length === 0 ? (
+            <div
+              className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-transparent"
+            >
+              {activeMessages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <div className="text-center space-y-4">
-                    <div className="relative w-24 h-24 mx-auto">
-                      <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full opacity-20 animate-pulse"></div>
-                      <div className="absolute inset-2 bg-slate-900/60 backdrop-blur-xl rounded-full flex items-center justify-center">
-                        <svg className="w-10 h-10 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                      </div>
+                  <div className="text-center space-y-3">
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center mx-auto bg-[#1e293b]/60"
+                    >
+                      <svg className="w-8 h-8 text-[var(--ig-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white mb-2">No messages yet</h3>
-                      <p className="text-slate-400">Start the conversation by sending a message below</p>
+                      <h3 className="text-base font-semibold text-white">No messages yet</h3>
+                      <p className="text-sm mt-1 text-[var(--ig-text-muted)]">Start the conversation below</p>
                     </div>
                   </div>
                 </div>
               ) : (
-                (state.messages[state.activeConversation.id] || []).map((message) => {
-                  // Get other participant for direct chats
-                  const otherParticipant = state.activeConversation?.type === 'direct'
-                    ? state.activeConversation.participants?.find(p => p.id !== currentUser?.uid)
-                    : undefined;
-                  
-                  return (
-                    <MessageBubble
-                      key={message.id}
-                      message={message}
-                      isCurrentUser={message.senderId === currentUser?.uid}
-                      onAddReaction={(emoji) => handleAddReaction(message.id, emoji)}
-                      onRemoveReaction={(emoji) => handleRemoveReaction(message.id, emoji)}
-                      conversationType={state.activeConversation?.type}
-                      otherParticipantId={otherParticipant?.id}
-                    />
-                  );
-                })
+                (() => {
+                  let lastDateLabel = '';
+                  return activeMessages.map((message) => {
+                    const otherParticipant = state.activeConversation?.type === 'direct'
+                      ? state.activeConversation.participants?.find(p => p.id !== currentUser?.uid)
+                      : undefined;
+                    const messageDate = new Date(message.timestamp);
+                    const dateLabel = getMessageDateLabel(messageDate);
+                    const showDivider = dateLabel !== lastDateLabel;
+                    lastDateLabel = dateLabel;
+
+                    return (
+                      <React.Fragment key={message.id}>
+                        {showDivider && (
+                          <div className="flex justify-center my-6">
+                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-[#1e293b]/80 text-[#94a3b8] border border-[var(--ig-border)] shadow-sm">
+                              {dateLabel}
+                            </span>
+                          </div>
+                        )}
+                        <MessageBubble
+                          message={message}
+                          isCurrentUser={message.senderId === currentUser?.uid}
+                          onAddReaction={(emoji) => handleAddReaction(message.id, emoji)}
+                          onRemoveReaction={(emoji) => handleRemoveReaction(message.id, emoji)}
+                          conversationType={state.activeConversation?.type}
+                          otherParticipantId={otherParticipant?.id}
+                        />
+                      </React.Fragment>
+                    );
+                  });
+                })()
               )}
+              {/* Auto-scroll sentinel */}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Typing Indicators */}
-            {state.typingIndicators
-              .filter(t => t.conversationId === state.activeConversation?.id)
-              .length > 0 && (
-              <div className="px-6 py-2 flex items-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
-                <p className="text-sm text-slate-400 italic">
-                  {state.typingIndicators
-                    .filter(t => t.conversationId === state.activeConversation?.id)
-                    .map(t => t.userName)
-                    .join(', ')}{' '}
-                  {state.typingIndicators.filter(t => t.conversationId === state.activeConversation?.id).length === 1
-                    ? 'is typing...' 
-                    : 'are typing...'}
-                </p>
+            {/* Send Error Banner */}
+            {sendError && (
+              <div
+                className="mx-6 mb-2 px-3 py-2 rounded-lg flex items-center gap-2 text-sm"
+                style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', color: 'var(--ig-danger)' }}
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {sendError}
               </div>
             )}
 
             {/* Message Input */}
-            <div className="relative z-10 px-6 py-4 bg-slate-900/60 backdrop-blur-xl border-t border-slate-800/50">
-              <form onSubmit={handleSendMessage} className="flex items-end space-x-3">
-                {/* File Upload Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowFileUpload(true)}
-                  className="group p-3 text-slate-400 hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all duration-200 hover:scale-110"
-                  disabled={sendingMessage}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                </button>
-
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
+            <div
+              className="flex-shrink-0 px-6 py-4 border-t border-[var(--ig-border)] bg-[var(--ig-surface)]"
+            >
+              <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                {/* Input container box that has icons inside */}
+                <div className="flex-1 flex items-center bg-[#020617] border border-[var(--ig-border)] rounded-full px-4 py-1.5 focus-within:border-[var(--ig-accent)] transition-all">
+                  {/* Emoji picker icon */}
+                  <button type="button" className="p-1.5 text-[var(--ig-text-secondary)] hover:text-white transition-colors" title="Emoji">
+                    <Smile className="w-5 h-5" />
+                  </button>
+                  
+                  {/* Textarea */}
+                  <textarea
+                    ref={textareaRef}
                     value={newMessage}
-                    onChange={handleInputChange}
+                    onChange={handleTextareaChange}
                     onKeyDown={handleKeyDown}
                     placeholder="Type a message..."
-                    className="w-full px-5 py-3.5 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white placeholder:text-slate-500 focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary focus:bg-slate-800/70 transition-all backdrop-blur-sm"
+                    rows={1}
+                    className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-white placeholder-[var(--ig-text-muted)] text-sm resize-none mx-2 max-h-24 py-1.5 scrollbar-none"
                     disabled={sendingMessage}
                   />
+                  
+                  {/* Right-side icons inside the input box */}
+                  <div className="flex items-center gap-1">
+                    {/* Attachment button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowFileUpload(true)}
+                      disabled={sendingMessage}
+                      className="p-1.5 text-[var(--ig-text-secondary)] hover:text-white transition-colors disabled:opacity-40"
+                      title="Attach file"
+                    >
+                      <Paperclip className="w-5 h-5" />
+                    </button>
+                    
+                    {/* Voice mic icon */}
+                    <button type="button" className="p-1.5 text-[var(--ig-text-secondary)] hover:text-white transition-colors" title="Voice note">
+                      <Mic className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
+                {/* Standalone send button */}
                 <button
                   type="submit"
                   disabled={sendingMessage || !newMessage.trim()}
-                  className="group relative px-5 py-3.5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-2xl hover:shadow-xl hover:shadow-brand-primary/40 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300"
+                  className="flex-shrink-0 w-11 h-11 flex items-center justify-center bg-[var(--ig-accent-strong)] hover:bg-[var(--ig-accent)] text-white rounded-full transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:scale-105"
+                  title="Send message"
                 >
                   {sendingMessage ? (
-                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg className="w-5 h-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                   ) : (
-                    <svg className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
+                    <Send className="w-4 h-4 translate-x-[1px] -translate-y-[1px]" />
                   )}
                 </button>
               </form>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-950/50 to-slate-900/30">
-            <div className="text-center space-y-8 max-w-md px-6">
-              <div className="relative w-32 h-32 mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full opacity-20 blur-2xl animate-pulse"></div>
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl rounded-full flex items-center justify-center border-2 border-slate-800/50">
-                  <svg className="w-16 h-16 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
+          /* No conversation selected — empty state */
+          <div
+            className="flex-1 hidden md:flex items-center justify-center bg-[var(--ig-surface)]"
+          >
+            <div className="text-center space-y-4 max-w-sm px-6">
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto bg-[#1e293b]/60"
+              >
+                <svg className="w-10 h-10 text-[var(--ig-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
               </div>
-              <div className="space-y-3">
-                <h3 className="text-3xl font-bold text-white">Your Messages</h3>
-                <p className="text-slate-400 text-lg leading-relaxed">
-                  Send private messages to team members and collaborators
+              <div>
+                <h3 className="text-xl font-semibold text-white">Your Messages</h3>
+                <p className="text-sm mt-2 text-[var(--ig-text-muted)]">
+                  Select a conversation to start chatting with team members
                 </p>
               </div>
               <button
                 onClick={handleNewConversation}
-                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl font-semibold hover:shadow-xl hover:shadow-brand-primary/40 hover:scale-105 transition-all duration-300"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-105"
+                style={{ background: 'var(--ig-accent-strong)', color: 'white' }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Send Message</span>
+                New Conversation
               </button>
             </div>
           </div>
         )}
       </div>
-      
+
       {/* Modals */}
       {showFileUpload && (
         <FileUpload
@@ -340,7 +482,6 @@ const Messages = () => {
           disabled={sendingMessage}
         />
       )}
-      
       {showNewConversation && (
         <NewConversationModal
           isOpen={showNewConversation}

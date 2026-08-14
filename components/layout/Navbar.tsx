@@ -63,7 +63,8 @@ export default function Navbar() {
 
   return (
     <motion.nav 
-      className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50 transition-all duration-300"
+      className="sticky top-0 z-50 transition-all duration-300 border-b backdrop-blur-xl"
+      style={{ background: 'rgba(2,6,23,0.85)', borderColor: 'var(--ig-border)' } as React.CSSProperties}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.3 }}

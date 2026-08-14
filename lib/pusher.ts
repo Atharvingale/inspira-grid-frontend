@@ -29,6 +29,12 @@ export const getPusherClient = () => {
       customHandler: async ({ socketId, channelName }, callback) => {
         try {
           const { auth } = await import('@/lib/firebase');
+          // Wait for Firebase to restore the persisted session before reading currentUser.
+          // auth.authStateReady() is available as an instance method in Firebase 10.14+.
+          const authInstance = auth as unknown as { authStateReady?: () => Promise<void> };
+          if (typeof authInstance.authStateReady === 'function') {
+            await authInstance.authStateReady();
+          }
           const user = auth.currentUser;
           if (!user) {
             throw new Error('No Firebase user is signed in.');

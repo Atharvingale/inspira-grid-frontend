@@ -1,13 +1,10 @@
 'use client';
 
 import React from 'react';
-import { formatDistanceToNow, isToday, isYesterday } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import { Search, Plus, Users, User } from 'lucide-react';
-import type { Conversation, User as UserType } from '@/lib/contexts/MessagingContext';
+import { Search, Plus, Users } from 'lucide-react';
+import type { Conversation } from '@/lib/contexts/MessagingContext';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -69,18 +66,20 @@ export function ConversationList({
     return name.includes(query) || lastMessage.includes(query);
   });
 
+  const formattedDate = format(new Date(), 'EEEE, d MMMM, yyyy');
+
   return (
-    <div className="w-1/3 bg-slate-900/60 backdrop-blur-xl border-r border-slate-800/50 flex flex-col">
+    <div className="w-full h-full flex flex-col bg-transparent">
       {/* Header */}
-      <div className="p-6 border-b border-slate-800/50">
+      <div className="p-6 border-b border-[var(--ig-border)]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Messages</h1>
-            <p className="text-sm text-slate-400 mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+            <h1 className="text-2xl font-bold text-white">Message</h1>
+            <p className="text-xs text-[var(--ig-text-secondary)] mt-1">{formattedDate}</p>
           </div>
           <button
             onClick={onNewConversation}
-            className="p-2.5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl hover:shadow-lg hover:shadow-brand-primary/30 hover:scale-110 transition-all duration-300"
+            className="p-2.5 bg-[var(--ig-accent-strong)] hover:bg-[var(--ig-accent)] text-white rounded-xl hover:scale-105 transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -88,18 +87,18 @@ export function ConversationList({
         
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--ig-text-muted)]" />
           <input
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search conversations..."
-            className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder:text-slate-500 focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary focus:bg-slate-800/70 transition-all"
+            placeholder="Search Chat..."
+            className="w-full pl-11 pr-4 py-2.5 bg-[var(--ig-bg)] border border-[var(--ig-border)] rounded-xl text-white placeholder-[var(--ig-text-muted)] focus:outline-none focus:border-[var(--ig-accent)] transition-all text-sm"
           />
         </div>
       </div>
 
       {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent py-3">
         {filteredConversations.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700/50">
@@ -124,62 +123,64 @@ export function ConversationList({
               <div
                 key={conversation.id}
                 onClick={() => onConversationSelect(conversation)}
-                className={`group relative p-4 cursor-pointer transition-all duration-300 ${
+                className={`group relative p-3.5 mx-3 my-1 rounded-xl cursor-pointer transition-all duration-200 ${
                   isActive 
-                    ? 'bg-gradient-to-r from-brand-primary/20 to-brand-secondary/10 border-l-4 border-brand-primary' 
-                    : 'hover:bg-slate-800/30 border-l-4 border-transparent hover:border-slate-700'
+                    ? 'bg-[var(--ig-surface-hover)] border border-[var(--ig-border)]' 
+                    : 'hover:bg-[var(--ig-surface-hover)] border border-transparent'
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <div className="relative flex-shrink-0">
                     {conversation.type === 'direct' ? (
-                      <Avatar className="w-14 h-14 ring-2 ring-slate-800/50 group-hover:ring-brand-primary/30 transition-all">
+                      <Avatar className="w-12 h-12 ring-2 ring-[var(--ig-border)] group-hover:ring-[var(--ig-accent)] transition-all">
                         <AvatarImage src={avatar.src} />
-                        <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-800 text-white font-semibold">
+                        <AvatarFallback className="bg-slate-800 text-white font-semibold">
                           {avatar.fallback}
                         </AvatarFallback>
                       </Avatar>
                     ) : (
-                      <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${
                         conversation.type === 'project_group'
-                          ? 'bg-gradient-to-br from-brand-primary to-brand-secondary'
+                          ? 'bg-gradient-to-br from-[var(--ig-accent)] to-[var(--ig-accent-strong)]'
                           : 'bg-gradient-to-br from-purple-500 to-pink-500'
                       }`}>
-                        {conversation.type === 'project_group' ? (
-                          <Users className="w-7 h-7 text-white" />
-                        ) : (
-                          <Users className="w-7 h-7 text-white" />
-                        )}
+                        <Users className="w-6 h-6 text-white" />
                       </div>
                     )}
                     
                     {/* Online indicator */}
                     {conversation.type === 'direct' && avatar.isOnline && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse"></div>
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#0f172a] rounded-full"></div>
                     )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-base font-semibold text-white truncate group-hover:text-brand-primary transition-colors">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-semibold text-white truncate group-hover:text-[var(--ig-accent)] transition-colors">
                         {getConversationName(conversation)}
                       </p>
                       {conversation.lastMessage && (
-                        <p className="text-xs text-slate-500 flex-shrink-0 ml-2 font-medium">
+                        <p className="text-xs text-[var(--ig-text-muted)] flex-shrink-0 ml-2 font-medium">
                           {formatLastMessageTime(conversation.lastMessage.timestamp)}
                         </p>
                       )}
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <p className={`text-sm truncate flex-1 mr-2 ${
-                        conversation.unreadCount > 0 ? 'text-slate-300 font-medium' : 'text-slate-400'
-                      }`}>
-                        {conversation.lastMessage?.content || 'No messages yet'}
-                      </p>
+                      {conversation.isTyping && conversation.isTyping.length > 0 ? (
+                        <span className="text-xs font-semibold italic text-[var(--ig-accent)] animate-pulse">
+                          Typing...
+                        </span>
+                      ) : (
+                        <p className={`text-xs truncate flex-1 mr-2 ${
+                          conversation.unreadCount > 0 ? 'text-white font-medium' : 'text-[var(--ig-text-secondary)]'
+                        }`}>
+                          {conversation.lastMessage?.content || 'No messages yet'}
+                        </p>
+                      )}
                       
                       {conversation.unreadCount > 0 && (
-                        <div className="bg-gradient-to-r from-brand-primary to-brand-secondary text-white text-xs font-bold px-2.5 py-1 rounded-full min-w-[24px] flex items-center justify-center shadow-lg animate-pulse">
+                        <div className="bg-[var(--ig-accent-strong)] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
                           {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
                         </div>
                       )}
@@ -187,32 +188,15 @@ export function ConversationList({
                     
                     {/* Project indicator */}
                     {conversation.type === 'project_group' && conversation.projectTitle && (
-                      <div className="flex items-center mt-2 px-2 py-1 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                        <div className="w-1.5 h-1.5 bg-brand-primary rounded-full mr-2 animate-pulse"></div>
-                        <p className="text-xs text-slate-400 truncate">
+                      <div className="flex items-center mt-1.5 px-2 py-0.5 bg-[var(--ig-bg)] rounded-lg border border-[var(--ig-border)]">
+                        <div className="w-1.5 h-1.5 bg-[var(--ig-accent)] rounded-full mr-2"></div>
+                        <p className="text-[10px] text-[var(--ig-text-secondary)] truncate">
                           Project: {conversation.projectTitle}
                         </p>
                       </div>
                     )}
                   </div>
                 </div>
-                
-                {/* Typing indicator */}
-                {conversation.isTyping && conversation.isTyping.length > 0 && (
-                  <div className="mt-3 flex items-center space-x-2 px-2 py-1.5 bg-brand-primary/10 rounded-lg border border-brand-primary/20">
-                    <div className="flex space-x-1">
-                      <div className="w-1.5 h-1.5 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-1.5 h-1.5 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-1.5 h-1.5 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                    <span className="text-xs text-brand-primary font-medium italic">
-                      {conversation.isTyping.length === 1
-                        ? `${conversation.participants.find(p => p.id === conversation.isTyping![0])?.name} is typing...`
-                        : `${conversation.isTyping.length} people are typing...`
-                      }
-                    </span>
-                  </div>
-                )}
               </div>
             );
           })

@@ -164,6 +164,8 @@ function messagingReducer(state: MessagingState, action: MessagingAction): Messa
 
     case 'ADD_MESSAGE': {
       const conversationMessages = state.messages[action.payload.conversationId] || [];
+      // Dedup by message ID
+      if (conversationMessages.some(m => m.id === action.payload.id)) return state;
       return {
         ...state,
         messages: {
@@ -333,8 +335,8 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
 
     // Message events
     channel.bind('message:new', (message: Message) => {
+      // Dedup: only add if not already present (optimistic dispatch may have added it)
       dispatch({ type: 'ADD_MESSAGE', payload: message });
-      // Play notification sound if message is not from current user
       if (message.senderId !== currentUser.uid) {
         playNotificationSound();
       }
@@ -527,8 +529,16 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
 
   const markConversationAsRead = useCallback((conversationId: string) => {
     dispatch({ type: 'MARK_CONVERSATION_READ', payload: conversationId });
-    // TODO: Send API call to mark as read
-  }, []);
+    // Fire-and-forget: mark read on server
+    if (currentUser) {
+      currentUser.getIdToken().then((token) => {
+        fetch(`/api/conversations/${conversationId}/read`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        }).catch(console.error);
+      }).catch(console.error);
+    }
+  }, [currentUser]);
 
   const archiveConversation = useCallback(async (conversationId: string) => {
     // TODO: Implement archive functionality
@@ -606,8 +616,10 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      // No need to dispatch - Pusher will handle real-time update
-      // dispatch({ type: 'ADD_MESSAGE', payload: data.message });
+      // Optimistic dispatch — show message immediately, Pusher deduplicates by ID
+      if (data.message) {
+        dispatch({ type: 'ADD_MESSAGE', payload: data.message });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;

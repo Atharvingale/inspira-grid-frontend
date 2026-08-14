@@ -10,6 +10,22 @@ module.exports = {
     extend: {
       colors: {
         // Antigravity-inspired dark system (Inspira-Grid brand)
+        ig: {
+          bg: '#020617',
+          'bg-elevated': '#0a0f1e',
+          surface: '#0f172a',
+          'surface-hover': '#1e293b',
+          border: '#1e293b',
+          'border-strong': '#334155',
+          text: '#f1f5f9',
+          'text-secondary': '#94a3b8',
+          'text-muted': '#475569',
+          accent: '#818cf8',
+          'accent-strong': '#6366f1',
+          success: '#34d399',
+          warning: '#fbbf24',
+          danger: '#f87171',
+        },
         brand: {
           DEFAULT: '#6ee7ff',
           primary: '#6ee7ff',
@@ -135,8 +151,8 @@ module.exports = {
         '2xl': '1rem',
       },
       boxShadow: {
-        'ig-focus': '0 0 0 2px #050505, 0 0 0 4px #6ee7ff',
-        'ig-glow': '0 0 24px rgba(110, 231, 255, 0.15)',
+        'ig-focus': '0 0 0 2px #020617, 0 0 0 4px #818cf8',
+        'ig-glow': '0 0 24px rgba(129, 140, 248, 0.15)',
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',

@@ -1,489 +1,420 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { motion } from "framer-motion";
-import { 
-  Sparkles, 
-  Rocket, 
-  Users, 
-  Code, 
-  MessageCircle, 
-  Trophy, 
+import { motion, useReducedMotion } from "framer-motion";
+import {
   ArrowRight,
+  Users,
+  FolderOpen,
+  MessageSquare,
   Github,
   Zap,
-  Heart,
-  Star
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import Button from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import ParticleField from "@/components/effects/ParticleField";
+
+const FADE_UP = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0 },
+};
+
+const stagger = (delay: number) => ({
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, delay } },
+});
+
+const FEATURES = [
+  {
+    icon: <FolderOpen className="w-5 h-5" />,
+    title: "Project Discovery",
+    body: "Browse open projects filtered by category, skills required, and team size. Apply to join in one step.",
+  },
+  {
+    icon: <Users className="w-5 h-5" />,
+    title: "Team Matching",
+    body: "Find collaborators whose skills complement yours. Build balanced teams around real project needs.",
+  },
+  {
+    icon: <MessageSquare className="w-5 h-5" />,
+    title: "Built-in Messaging",
+    body: "Private and group conversations, file sharing, and typing indicators — no external tools needed.",
+  },
+  {
+    icon: <Github className="w-5 h-5" />,
+    title: "GitHub Integration",
+    body: "Link your repositories to projects and surface commits, issues, and contributors directly in the workspace.",
+  },
+  {
+    icon: <Zap className="w-5 h-5" />,
+    title: "Real-time Notifications",
+    body: "Stay updated on applications, team changes, and messages via live push notifications.",
+  },
+  {
+    icon: <ArrowRight className="w-5 h-5" />,
+    title: "Application Lifecycle",
+    body: "Apply, wait for review, get accepted or declined — with full visibility at every step.",
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    title: "Create your profile",
+    body: "Add your skills, interests, and GitHub. A complete profile gets more responses.",
+  },
+  {
+    step: "02",
+    title: "Browse or post a project",
+    body: "Find an open project that needs your skills, or start one and define the roles you need.",
+  },
+  {
+    step: "03",
+    title: "Apply and collaborate",
+    body: "Submit a one-step application. Once accepted, get access to the team workspace and messaging.",
+  },
+];
 
 export default function HomePage() {
-  const [user, loading] = useAuthState(auth);
+  const [user, loadingAuth] = useAuthState(auth);
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
 
-  // Redirect to dashboard if already logged in
   useEffect(() => {
-    if (!loading && user) {
-      router.push("/dashboard");
+    if (!loadingAuth && user) {
+      router.replace("/dashboard");
     }
-  }, [user, loading, router]);
+  }, [user, loadingAuth, router]);
 
-  if (loading) {
+  if (loadingAuth) {
     return (
-      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
-        <div className="text-center">
-          <motion.div 
-            className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full mx-auto mb-4"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          />
-          <motion.p 
-            className="text-text-tertiary text-lg"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            Loading your experience...
-          </motion.p>
-        </div>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--ig-bg)" }}
+      >
+        <div
+          className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--ig-accent)" }}
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-darker via-dark to-dark-surface text-text-primary overflow-hidden">
-      {/* Enhanced floating elements background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          className="absolute top-20 left-10 w-24 h-24 bg-brand-primary/15 rounded-full blur-2xl"
-          animate={{ y: [-20, 20, -20], x: [-10, 10, -10] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute top-40 right-20 w-36 h-36 bg-brand-secondary/15 rounded-full blur-2xl"
-          animate={{ y: [20, -20, 20], x: [10, -10, 10] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute bottom-20 left-1/4 w-20 h-20 bg-accent-cyan/15 rounded-full blur-2xl"
-          animate={{ y: [-15, 15, -15] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute top-1/2 right-1/4 w-28 h-28 bg-accent-purple/10 rounded-full blur-3xl"
-          animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        />
-      </div>
-
-      {/* Header */}
-      <motion.header 
-        className="relative z-10 backdrop-blur-sm bg-white/5 border-b border-white/10"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+    <div
+      className="min-h-screen overflow-x-hidden"
+      style={{ background: "var(--ig-bg)", color: "var(--ig-text)" }}
+    >
+      {/* ─── Header ─── */}
+      <header
+        className="sticky top-0 z-50 border-b"
+        style={{
+          background: "rgba(2, 6, 23, 0.8)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderColor: "var(--ig-border)",
+        }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <nav className="flex justify-between items-center">
-            <motion.div 
-              className="flex items-center space-x-2"
-              whileHover={{ scale: 1.05 }}
+        <div className="ig-container">
+          <nav className="h-14 flex items-center justify-between">
+            {/* Wordmark */}
+            <span
+              className="text-lg font-bold tracking-tight"
+              style={{ color: "var(--ig-text)" }}
             >
-              <div className="w-10 h-10 bg-gradient-brand rounded-xl flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-text-primary to-text-secondary bg-clip-text text-transparent">
-                Inspira-Grid
-              </span>
-            </motion.div>
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Link href="/auth/login">Login</Link>
-              </Button>
-              <Button variant="primary" size="sm">
-                <Link href="/auth/register">Get Started</Link>
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              Inspira<span style={{ color: "var(--ig-accent)" }}>Grid</span>
+            </span>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/auth/login"
+                className="text-sm px-4 py-2 rounded-lg transition-colors"
+                style={{ color: "var(--ig-text-secondary)" }}
+              >
+                Login
+              </Link>
+              <Link
+                href="/auth/register"
+                className="text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ background: "var(--ig-accent)", color: "var(--ig-bg)" }}
+              >
+                Get started
+              </Link>
             </div>
           </nav>
         </div>
-      </motion.header>
+      </header>
 
-      {/* Hero Section */}
-      <section className="relative z-10 py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
+      {/* ─── Hero ─── */}
+      <section className="relative overflow-hidden" style={{ minHeight: "90vh" }}>
+        {/* Particle field atmosphere */}
+        <ParticleField
+          className="absolute inset-0"
+          density={40}
+          interactive={!shouldReduceMotion}
+        />
+
+        <div className="ig-container relative z-10 flex flex-col items-center justify-center text-center pt-32 pb-24">
+          <motion.div
+            variants={FADE_UP}
+            initial="hidden"
+            animate="show"
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-8 border"
+            style={{
+              background: "var(--ig-accent-dim)",
+              borderColor: "rgba(129,140,248,0.25)",
+              color: "var(--ig-accent)",
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+            Open to everyone — free forever
+          </motion.div>
+
+          <motion.h1
+            variants={stagger(0.1)}
+            initial="hidden"
+            animate="show"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-none tracking-tight ig-display mb-6 text-balance"
+          >
+            Build projects.
+            <br />
+            <span style={{ color: "var(--ig-accent)" }}>Find your team.</span>
+          </motion.h1>
+
+          <motion.p
+            variants={stagger(0.2)}
+            initial="hidden"
+            animate="show"
+            className="text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
+            style={{ color: "var(--ig-text-secondary)" }}
+          >
+            Inspira Grid connects developers, designers, and creators with open
+            collaborative projects. Apply to join a team or post your own idea
+            and find the right people to build it with.
+          </motion.p>
+
+          <motion.div
+            variants={stagger(0.3)}
+            initial="hidden"
+            animate="show"
+            className="flex flex-col sm:flex-row items-center gap-3"
+          >
+            <Link
+              href="/auth/register"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:opacity-90 active:scale-95"
+              style={{ background: "var(--ig-accent)", color: "var(--ig-bg)" }}
             >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 leading-tight">
-                <span className="bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text text-transparent">
-                  Build Epic
-                </span>
-                <br />
-                <span className="bg-gradient-to-r from-brand-light to-brand-secondary bg-clip-text text-transparent">
-                  Projects
-                </span>
-                <br />
-                <span className="bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text text-transparent">
-                  Together
-                </span>
-              </h1>
-              
-              <motion.p 
-                className="text-lg sm:text-xl text-text-secondary mb-6 sm:mb-8 leading-relaxed max-w-lg"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-              >
-                Join the most vibrant community of young creators, developers, and innovators. 
-                Find your dream team and build the next big thing.
-              </motion.p>
-              
-              <motion.div 
-                className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-              >
-                <Button variant="primary" size="lg" className="group">
-                  <Link href="/auth/register" className="flex items-center">
-                    <Rocket className="w-5 h-5 mr-2 group-hover:animate-bounce" />
-                    Start Building Now
-                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-                <Button variant="secondary" size="lg">
-                  <Link href="/auth/login" className="flex items-center">
-                    <Heart className="w-5 h-5 mr-2" />
-                    Join Community
-                  </Link>
-                </Button>
-              </motion.div>
-              
-              <motion.div 
-                className="flex items-center space-x-6 text-sm text-text-tertiary"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
-              >
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
-                  100% Free Forever
-                </div>
-                <div className="flex items-center">
-                  <Star className="w-4 h-4 text-yellow-400 mr-2" />
-                  No Credit Card Required
-                </div>
-              </motion.div>
-            </motion.div>
-            
-            <motion.div
-              className="relative"
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
+              Start building
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/auth/login"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm border transition-colors"
+              style={{
+                borderColor: "var(--ig-border-strong)",
+                color: "var(--ig-text-secondary)",
+              }}
             >
-              <div className="relative">
-                {/* Main card */}
-                <motion.div 
-                  className="relative z-10"
-                  whileHover={{ y: -10 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <Card blur className="p-8">
-                    <div className="grid grid-cols-3 gap-6">
-                      <motion.div 
-                        className="text-center p-6 bg-gradient-brand rounded-2xl text-white"
-                        whileHover={{ scale: 1.05, rotate: 2 }}
-                      >
-                        <Users className="w-8 h-8 mx-auto mb-3" />
-                        <div className="font-semibold">Team Up</div>
-                        <div className="text-xs opacity-75 mt-1">Find your squad</div>
-                      </motion.div>
-                      <motion.div 
-                        className="text-center p-6 bg-gradient-success rounded-2xl text-white"
-                        whileHover={{ scale: 1.05, rotate: -2 }}
-                        transition={{ delay: 0.1 }}
-                      >
-                        <Code className="w-8 h-8 mx-auto mb-3" />
-                        <div className="font-semibold">Build</div>
-                        <div className="text-xs opacity-75 mt-1">Create magic</div>
-                      </motion.div>
-                      <motion.div 
-                        className="text-center p-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl text-white"
-                        whileHover={{ scale: 1.05, rotate: 1 }}
-                        transition={{ delay: 0.2 }}
-                      >
-                        <Trophy className="w-8 h-8 mx-auto mb-3" />
-                        <div className="font-semibold">Succeed</div>
-                        <div className="text-xs opacity-75 mt-1">Ship & celebrate</div>
-                      </motion.div>
-                    </div>
-                  </Card>
-                </motion.div>
-                
-                {/* Floating stats */}
-                <motion.div 
-                  className="absolute -top-6 -right-6 z-20"
-                  animate={{ y: [-10, 10, -10] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                >
-                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-white text-sm font-medium">Community Online</span>
-                    </div>
-                  </div>
-                </motion.div>
-                
-                <motion.div 
-                  className="absolute -bottom-6 -left-6 z-20"
-                  animate={{ y: [10, -10, 10] }}
-                  transition={{ duration: 5, repeat: Infinity }}
-                >
-                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-                    <div className="flex items-center space-x-2">
-                      <Github className="w-4 h-4 text-white" />
-                      <span className="text-white text-sm font-medium">Repos Connected</span>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.div>
-          </div>
+              Sign in
+            </Link>
+          </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="relative py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div 
+      {/* ─── How it works ─── */}
+      <section
+        className="py-24 border-t"
+        style={{ borderColor: "var(--ig-border)" }}
+      >
+        <div className="ig-container">
+          <motion.div
+            variants={FADE_UP}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5 }}
             className="text-center mb-16"
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
           >
-            <h2 className="text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-text-primary to-text-secondary bg-clip-text text-transparent">
-                Everything You Need to
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-brand-light to-brand-secondary bg-clip-text text-transparent">
-                Create Magic ✨
-              </span>
-            </h2>
-            <p className="text-xl text-text-secondary max-w-2xl mx-auto">
-              Built for the next generation of creators. Simple, powerful, and absolutely free.
+            <p
+              className="text-xs font-semibold uppercase tracking-widest mb-3"
+              style={{ color: "var(--ig-accent)" }}
+            >
+              How it works
             </p>
+            <h2
+              className="text-3xl sm:text-4xl font-bold tracking-tight"
+              style={{ color: "var(--ig-text)" }}
+            >
+              From idea to team in three steps
+            </h2>
           </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {[
-              {
-                icon: <Sparkles className="w-8 h-8" />,
-                title: "Project Discovery",
-                description: "Find epic projects that match your vibe. Filter by tech stack, difficulty, and team size.",
-                gradient: "from-brand-primary to-cyan-500",
-                delay: 0.1
-              },
-              {
-                icon: <Users className="w-8 h-8" />,
-                title: "Smart Team Matching",
-                description: "Our AI connects you with teammates who complement your skills and share your passion.",
-                gradient: "from-green-500 to-emerald-500",
-                delay: 0.2
-              },
-              {
-                icon: <Github className="w-8 h-8" />,
-                title: "GitHub Integration",
-                description: "Seamlessly connect your repos. Track contributions and showcase your commits.",
-                gradient: "from-gray-700 to-gray-900",
-                delay: 0.3
-              },
-              {
-                icon: <MessageCircle className="w-8 h-8" />,
-                title: "Real-time Chat",
-                description: "Instant messaging with typing indicators, file sharing, and emoji reactions.",
-                gradient: "from-purple-500 to-pink-500",
-                delay: 0.4
-              },
-              {
-                icon: <Trophy className="w-8 h-8" />,
-                title: "Progress Tracking",
-                description: "Beautiful dashboards to monitor project progress and celebrate team achievements.",
-                gradient: "from-yellow-500 to-orange-500",
-                delay: 0.5
-              },
-              {
-                icon: <Zap className="w-8 h-8" />,
-                title: "Lightning Fast",
-                description: "Built for speed. No lag, no waiting. Just pure creative flow.",
-                gradient: "from-brand-500 to-dark-lighter",
-                delay: 0.6
-              }
-            ].map((feature, index) => (
+
+          <div className="grid sm:grid-cols-3 gap-8">
+            {HOW_IT_WORKS.map((step, i) => (
               <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: feature.delay }}
-                whileHover={{ y: -10 }}
+                key={step.step}
+                variants={stagger(i * 0.1)}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.3 }}
+                className="relative"
               >
-                <Card className="p-8 h-full group hover:border-white/20">
-                  <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 text-white`}>
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-2xl font-bold text-text-primary mb-4 group-hover:text-brand-light transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-text-tertiary leading-relaxed group-hover:text-text-secondary transition-colors">
-                    {feature.description}
-                  </p>
-                </Card>
+                <div
+                  className="text-5xl font-bold leading-none mb-4 ig-display select-none"
+                  style={{ color: "var(--ig-border-strong)" }}
+                >
+                  {step.step}
+                </div>
+                <h3
+                  className="text-lg font-semibold mb-2"
+                  style={{ color: "var(--ig-text)" }}
+                >
+                  {step.title}
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--ig-text-secondary)" }}>
+                  {step.body}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative py-20">
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-600/20 to-purple-600/20 backdrop-blur-3xl" />
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+      {/* ─── Features ─── */}
+      <section
+        className="py-24 border-t"
+        style={{ borderColor: "var(--ig-border)", background: "var(--ig-surface)" }}
+      >
+        <div className="ig-container">
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
+            variants={FADE_UP}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-16"
           >
-            <h2 className="text-5xl lg:text-6xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-text-primary to-text-secondary bg-clip-text text-transparent">
-                Ready to Build the
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-brand-light to-brand-secondary bg-clip-text text-transparent">
-                Future Together?
-              </span>
+            <p
+              className="text-xs font-semibold uppercase tracking-widest mb-3"
+              style={{ color: "var(--ig-accent)" }}
+            >
+              Features
+            </p>
+            <h2
+              className="text-3xl sm:text-4xl font-bold tracking-tight"
+              style={{ color: "var(--ig-text)" }}
+            >
+              Everything you need to collaborate
             </h2>
-            <motion.p 
-              className="text-xl text-text-secondary mb-12 max-w-2xl mx-auto leading-relaxed"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-            >
-              Join creators, developers, and innovators who are building 
-              amazing projects and making lifelong connections.
-            </motion.p>
-            
-            <motion.div
-              className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.4 }}
-            >
-              <Button variant="primary" size="xl" className="group">
-                <Link href="/auth/register" className="flex items-center">
-                  <Rocket className="w-6 h-6 mr-3 group-hover:animate-bounce" />
-                  Start Building for Free
-                  <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              
-              <div className="flex items-center space-x-4 text-text-tertiary">
-                <div className="flex -space-x-2">
-                  {[1,2,3,4].map((i) => (
-                    <div key={i} className="w-8 h-8 bg-gradient-to-r from-brand-light to-brand-secondary rounded-full border-2 border-dark-surface" />
-                  ))}
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES.map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                variants={stagger(i * 0.07)}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.2 }}
+                className="p-6 rounded-xl border"
+                style={{
+                  background: "var(--ig-bg)",
+                  borderColor: "var(--ig-border)",
+                }}
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+                  style={{
+                    background: "var(--ig-accent-dim)",
+                    color: "var(--ig-accent)",
+                  }}
+                >
+                  {feature.icon}
                 </div>
-                <span className="text-sm">Join the community</span>
-              </div>
-            </motion.div>
-            
+                <h3
+                  className="text-base font-semibold mb-2"
+                  style={{ color: "var(--ig-text)" }}
+                >
+                  {feature.title}
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--ig-text-secondary)" }}>
+                  {feature.body}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Final CTA ─── */}
+      <section className="py-28">
+        <div className="ig-container">
+          <motion.div
+            variants={FADE_UP}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.55 }}
+            className="text-center max-w-2xl mx-auto"
+          >
+            <h2
+              className="text-4xl sm:text-5xl font-bold tracking-tight ig-display mb-6"
+              style={{ color: "var(--ig-text)" }}
+            >
+              Ready to start building?
+            </h2>
+            <p
+              className="text-lg mb-10"
+              style={{ color: "var(--ig-text-secondary)" }}
+            >
+              Join Inspira Grid and find your next collaborative project today.
+            </p>
+            <Link
+              href="/auth/register"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-base transition-all hover:opacity-90 active:scale-95"
+              style={{ background: "var(--ig-accent)", color: "var(--ig-bg)" }}
+            >
+              Create a free account
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </motion.div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative border-t border-dark-border bg-dark-surface">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div className="md:col-span-2">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-text-primary to-text-secondary bg-clip-text text-transparent">
-                  Inspira-Grid
-                </span>
-              </div>
-              <p className="text-text-tertiary mb-6 max-w-md">
-                The ultimate platform for young creators to collaborate, innovate, and build 
-                the next generation of amazing projects.
-              </p>
-              <div className="flex space-x-4">
-                <motion.a 
-                  href="#" 
-                  className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-brand-primary/20 hover:border hover:border-brand-primary/30 transition-all backdrop-blur-sm"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Github className="w-5 h-5" />
-                </motion.a>
-                <motion.a 
-                  href="#" 
-                  className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-brand-primary/20 hover:border hover:border-brand-primary/30 transition-all backdrop-blur-sm"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <MessageCircle className="w-5 h-5" />
-                </motion.a>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-text-primary font-semibold mb-4">Product</h3>
-              <div className="space-y-3">
-                {['Features', 'Pricing', 'Security', 'Updates'].map((item) => (
-                  <a key={item} href="#" className="block text-text-tertiary hover:text-text-primary transition-colors">
-                    {item}
-                  </a>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-text-primary font-semibold mb-4">Support</h3>
-              <div className="space-y-3">
-                {['Help Center', 'Community', 'Contact', 'Status'].map((item) => (
-                  <a key={item} href="#" className="block text-text-tertiary hover:text-text-primary transition-colors">
-                    {item}
-                  </a>
-                ))}
-              </div>
-            </div>
+      {/* ─── Footer ─── */}
+      <footer
+        className="border-t py-10"
+        style={{ borderColor: "var(--ig-border)" }}
+      >
+        <div className="ig-container flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span
+            className="text-sm font-semibold"
+            style={{ color: "var(--ig-text-muted)" }}
+          >
+            Inspira<span style={{ color: "var(--ig-accent)" }}>Grid</span>
+          </span>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/auth/login"
+              className="text-sm transition-colors"
+              style={{ color: "var(--ig-text-muted)" }}
+            >
+              Login
+            </Link>
+            <Link
+              href="/auth/register"
+              className="text-sm transition-colors"
+              style={{ color: "var(--ig-text-muted)" }}
+            >
+              Register
+            </Link>
           </div>
-          
-          <div className="border-t border-dark-border pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-text-tertiary mb-4 md:mb-0">
-              © 2024 Inspira-Grid. Made with ❤️ for the next generation of creators.
-            </p>
-            <div className="flex space-x-6 text-text-tertiary text-sm">
-              <a href="#" className="hover:text-text-primary transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-text-primary transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-text-primary transition-colors">Cookies</a>
-            </div>
-          </div>
+          <p className="text-xs" style={{ color: "var(--ig-text-muted)" }}>
+            © {new Date().getFullYear()} Inspira Grid
+          </p>
         </div>
       </footer>
     </div>
